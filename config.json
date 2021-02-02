@@ -1,0 +1,86 @@
+{
+    "metadata": {
+        "title": "Universal Kriging Configuration",
+        "author": "Barron H. Henderson",
+        "contact": "<lastname>.<firstname>@epa.gov",
+        "Revision": "v0.1",
+        "Notes" : "All options are for pykrige and fusion of pykrige surfaces. Ranges are based on expert knowledge.",
+        "field_definitions": {
+            "longitude_center": "Dividing line for West/East; units: degrees east",
+            "latitude_center": "Dividing line for South/North; units: degrees north",
+            "urban_minimum_density": "grid cells with people/km**2 less than urban_minimum density are rural",
+            "variogram_model": "pykrige variogram model (exponential or gaussian)",
+            "variogram_parameters": "range is set by other parameters, but psill and nuggest are set here",
+            "rural_gridcell_range": "range parameter for variogram (gaussian or exponential) to be used for rural environments units: grid cells",
+            "urban_gridcell_range": "same as rural_gridcell_range, but for urban",
+            "urban_blend": "variable used ('var') to calculate fractional use of urban kriged surface where 0 is at value ('0') and 1 is at value ('1').",
+            "east_blend": "Same as urban_blend, but for east.",
+            "north_blend": "Same as urban_blend, but for north.",
+            "obs_path": "Path where observatiosn can be found.",
+            "obs_defn": "first_max_value * 1000",
+            "obs_key": "short name for observations.",
+            "pop_path": "Population density file (must have DENS variable).",
+            "model_template": "strftime with for using date to constructe file path",
+            "model_inkey": "Modeling variable name",
+            "griddesc_path": "Path to IOAPI GRIDDESC file",
+            "domain": "Domain key (e.g., 12US1, 12US2, 36US3), which must be defined in griddesc_path",
+            "output_template": "output/UK.%Y%m%d.{querykey}.nc"
+        }
+    },
+    "transform": "sqrt",
+    "krig_opts": {
+        "variogram_model": "gaussian",
+        "variogram_parameters": {
+            "psill": 0.75, "range": "see rural_ or urban_gridcell_range", "nugget": 0.25
+        },
+        "drift_terms": ["regional_linear"]
+    },
+    "longitude_center": -97,
+    "latitude_center": 40,
+    "urban_minimum_density": 100,
+    "urban_blend": {
+        "var": "DENS", "0": 60, "1": 200, "notes": "15/km2 = 0; 100/km2 = 1"
+    },
+    "longitude_blend": {
+        "var": "longitude", "0": -102, "1": -92, "notes": "5 degree transition on each side"
+    },
+    "latitude_blend": {
+        "var": "latitude", "0": 35, "1": 45, "notes": "5 degree transition on each side"
+    },
+    "obs_path": "input/daily_44201_20160715.zip",
+    "obs_defn": "first_max_value * 1000",
+    "obs_key": "O",
+    "pop_path": "/work/ROMO/gis_rasters/gpw-v4/gpw_v4_une_atotpopbt_densy_12US2.IOAPI.nc",
+    "model_template": "/work/ROMO/2016platform/CMAQv531/2016fh/12US2/POST/O3/O3.LST.Y_24.2016fh.v531.12US2.%m.ncf",
+    "model_inkey": "O3_8HRMAX",
+    "griddesc_path": "input/GRIDDESC",
+    "domain": "12US2",
+    "output_template": "output/UK.%Y%m%d.{querykey}.nc",
+    "query_definitions": {
+        "WN_RUR": "longitude < {longitude_center} and latitude >= {latitude_center} and DENS < {urban_minimum_density}",
+        "WN_URB": "longitude < {longitude_center} and latitude >= {latitude_center} and DENS >= {urban_minimum_density}",
+        "WS_RUR": "longitude < {longitude_center} and latitude < {latitude_center} and DENS < {urban_minimum_density}",
+        "WS_URB": "longitude < {longitude_center} and latitude < {latitude_center} and DENS >= {urban_minimum_density}",
+        "EN_RUR": "longitude >= {longitude_center} and latitude >= {latitude_center} and DENS < {urban_minimum_density}",
+        "EN_URB": "longitude >= {longitude_center} and latitude >= {latitude_center} and DENS >= {urban_minimum_density}",
+        "ES_RUR": "longitude >= {longitude_center} and latitude < {latitude_center} and DENS < {urban_minimum_density}",
+        "ES_URB": "longitude >= {longitude_center} and latitude < {latitude_center} and DENS >= {urban_minimum_density}",
+        "ALL_URB": "DENS >= {urban_minimum_density}",
+        "ALL_RUR": "DENS < {urban_minimum_density}",
+        "ALL_BOTH": "DENS >= 0"
+    },
+    "query_gridcell_ranges": {
+        "WN_RUR": 30,
+        "WN_URB": 5,
+        "WS_RUR": 30,
+        "WS_URB": 5,
+        "EN_RUR": 30,
+        "EN_URB": 5,
+        "ES_RUR": 30,
+        "ES_URB": 5,
+        "ALL_URB": 5,
+        "ALL_RUR": 30,
+        "ALL_BOTH": 15
+    }
+}
+    
