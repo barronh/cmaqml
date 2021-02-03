@@ -31,7 +31,7 @@ poppath = cfg['pop_path']
 popf = pnc.pncopen(poppath, format='ioapi')
 
 # Time three is present day
-DENS = popf.variables['DENS'][3, 0]
+pop_per_km2 = popf.variables['DENS'][3, 0]
 
 paths = sorted(glob(f'output/UK.{date}.[EW][SN]_???.nc{validate_suffix}'))
 
@@ -43,14 +43,7 @@ I, J = np.meshgrid(
     np.arange(popf.NCOLS),
     np.arange(popf.NROWS)
 )
-lon, lat = popf.ij2ll(I, J)
-
-N = (lat >= nsdiv)
-S = ~N
-E = (lon >= ewdiv)
-W = ~E
-U = (DENS >= urdiv)
-R = ~U
+longitude, latitude = popf.ij2ll(I, J)
 
 outf = ukfiles['WN_RUR'].copy()
 urbf = ukfiles['WN_RUR'].copy()
@@ -58,11 +51,9 @@ rurf = ukfiles['WN_RUR'].copy()
 # cmaqkeys = [k for k in outf.variables if k != 'TFLAG']
 cmaqkeys = ['UK_TOTAL', 'UK_ERROR', 'SD', 'Q', 'Y']
 
-ismine = np.ones(N.shape, dtype='bool')
-
-ufrac = np.maximum(0, np.minimum(1, (DENS - u0) / (u1 - u0)))
-nfrac = np.maximum(0, np.minimum(1, (lat - n0) / (n1 - n0)))
-efrac = np.maximum(0, np.minimum(1, (lon - e0) / (e1 - e0)))
+ufrac = np.maximum(0, np.minimum(1, (pop_per_km2 - u0) / (u1 - u0)))
+nfrac = np.maximum(0, np.minimum(1, (latitude - n0) / (n1 - n0)))
+efrac = np.maximum(0, np.minimum(1, (longitude - e0) / (e1 - e0)))
 rfrac = 1 - ufrac
 sfrac = 1 - nfrac
 wfrac = 1 - efrac
