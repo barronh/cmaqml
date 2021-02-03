@@ -22,9 +22,10 @@ e0 = cfg["longitude_blend"]["0"]
 e1 = cfg["longitude_blend"]["1"]
 
 if args.validate == 0:
-    validate_suffix = ''
+    suffix = '.prod.nc'
 else:
-    validate_suffix = f'.{args.validate:02d}'
+    suffix = f'.test{args.validate:02}.nc'
+
 cmaqkey = 'UK'
 poppath = cfg['pop_path']
 
@@ -33,10 +34,10 @@ popf = pnc.pncopen(poppath, format='ioapi')
 # Time three is present day
 pop_per_km2 = popf.variables['DENS'][3, 0]
 
-paths = sorted(glob(f'output/UK.{date}.[EW][SN]_???.nc{validate_suffix}'))
+paths = sorted(glob(f'output/UK.{date}.[EW][SN]_*{suffix}'))
 
 ukfiles = {
-    path.split('.nc')[0].split('.')[-1]: pnc.pncopen(path, format='ioapi')
+    path.split(f'{suffix}')[0].split('.')[-1]: pnc.pncopen(path, format='ioapi')
     for path in paths
 }
 I, J = np.meshgrid(
@@ -45,9 +46,35 @@ I, J = np.meshgrid(
 )
 longitude, latitude = popf.ij2ll(I, J)
 
-outf = ukfiles['WN_RUR'].copy()
-urbf = ukfiles['WN_RUR'].copy()
-rurf = ukfiles['WN_RUR'].copy()
+outf = ukfiles['EN_RUR'].copy()
+delattr(outf, 'lags')
+delattr(outf, 'empirical_semivariance')
+delattr(outf, 'predicted_semivariance')
+fusedefn = (
+    "\n Fractions:"
+    + f"\n North: (lat - {n0}) / ({n1} - {n0})"
+    + f"\n East : (lon - {e0}) / ({e1} - {e0})"
+)
+outf.FILEDESC = (
+    "Fused:\n" + "\n - ".join([p for p in paths])
+    + fusedefn
+    + f"\n Urban: (pop_per_km2 - {u0}) / ({u1} - {u0})"
+)
+urbf = outf.copy()
+urbf.FILEDESC = (
+    "Fused:\n" + "\n - ".join([p for p in paths if '_URB.' in p])
+    + fusedefn
+)
+rurf = outf.copy()
+rurf.FILEDESC = (
+    "Fused:\n" + "\n - ".join([p for p in paths if '_RUR.' in p])
+    + fusedefn
+)
+bothf = outf.copy()
+bothf.FILEDESC = (
+    "Fused:\n" + "\n - ".join([p for p in paths if '_BOTH.' in p])
+    + fusedefn
+)
 # cmaqkeys = [k for k in outf.variables if k != 'TFLAG']
 cmaqkeys = ['UK_TOTAL', 'UK_ERROR', 'SD', 'Q', 'Y']
 
@@ -81,17 +108,23 @@ for cmaqkey in cmaqkeys:
         + ukfiles['EN_RUR'].variables[cmaqkey][0, 0] * (efrac * nfrac)
         + ukfiles['ES_RUR'].variables[cmaqkey][0, 0] * (efrac * sfrac)
     )
+    bothf.variables[cmaqkey][0, 0] = (
+        ukfiles['WN_BOTH'].variables[cmaqkey][0, 0] * (wfrac * nfrac)
+        + ukfiles['WS_BOTH'].variables[cmaqkey][0, 0] * (wfrac * sfrac)
+        + ukfiles['EN_BOTH'].variables[cmaqkey][0, 0] * (efrac * nfrac)
+        + ukfiles['ES_BOTH'].variables[cmaqkey][0, 0] * (efrac * sfrac)
+    )
 
 outf.save(
-    f'output/UK.{date}.FUSED.URBRUR.nc{validate_suffix}',
+    f'blend/UK.{date}.BLEND_BLEND{suffix}',
     complevel=1, verbose=0
 )
-outf.save(
-    f'output/UK.{date}.FUSED.BOTH.nc{validate_suffix}', complevel=1, verbose=0
+bothf.save(
+    f'blend/UK.{date}.BLEND_BOTH{suffix}', complevel=1, verbose=0
 )
 urbf.save(
-    f'output/UK.{date}.FUSED.URB.nc{validate_suffix}', complevel=1, verbose=0
+    f'blend/UK.{date}.BLEND_URB{suffix}', complevel=1, verbose=0
 )
 rurf.save(
-    f'output/UK.{date}.FUSED.RUR.nc{validate_suffix}', complevel=1, verbose=0
+    f'blend/UK.{date}.BLEND_RUR{suffix}', complevel=1, verbose=0
 )

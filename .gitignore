@@ -2,6 +2,8 @@
 figs/*
 output/*
 input/*
+csv/*
+blend/*
 log.run
 !output/.keep
 !figs/.keep

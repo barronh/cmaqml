@@ -29,12 +29,8 @@
     },
     "transform": "sqrt",
     "krig_opts": {
-        "variogram_model": "gaussian",
-        "drift_terms": ["regional_linear"],
+        "variogram_model": "exponential",
         "pseudo_inv": true
-    },
-    "variogram_parameters_gaussian": {
-        "psill": 0.75, "range": "overwriten by query_ranges", "nugget": 0.25
     },
     "longitude_center": -97,
     "latitude_center": 40,
@@ -56,7 +52,7 @@
     "model_inkey": "O3_8HRMAX",
     "griddesc_path": "input/GRIDDESC",
     "domain": "12US2",
-    "output_template": "output/UK.%Y%m%d.{querykey}.nc",
+    "output_template": "output/UK.%Y%m%d.{querykey}.{suffix}.nc",
     "query_definitions": {
         "WN_RUR": "longitude < {longitude_center} and latitude >= {latitude_center} and pop_per_km2 < {urban_minimum_density}",
         "WN_URB": "longitude < {longitude_center} and latitude >= {latitude_center} and pop_per_km2 >= {urban_minimum_density}",
@@ -66,9 +62,13 @@
         "EN_URB": "longitude >= {longitude_center} and latitude >= {latitude_center} and pop_per_km2 >= {urban_minimum_density}",
         "ES_RUR": "longitude >= {longitude_center} and latitude < {latitude_center} and pop_per_km2 < {urban_minimum_density}",
         "ES_URB": "longitude >= {longitude_center} and latitude < {latitude_center} and pop_per_km2 >= {urban_minimum_density}",
+        "WN_BOTH": "longitude < {longitude_center} and latitude >= {latitude_center}",
+        "WS_BOTH": "longitude < {longitude_center} and latitude < {latitude_center}",
+        "EN_BOTH": "longitude >= {longitude_center} and latitude >= {latitude_center}",
+        "ES_BOTH": "longitude >= {longitude_center} and latitude < {latitude_center}",
         "ALL_URB": "pop_per_km2 >= {urban_minimum_density}",
         "ALL_RUR": "pop_per_km2 < {urban_minimum_density}",
-        "ALL_BOTH": "pop_per_km2 >= 0"
+        "ALL_BOTH": "longitude == longitude"
     }
 }
     

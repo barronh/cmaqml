@@ -1,3 +1,4 @@
+import time
 import PseudoNetCDF as pnc
 import pandas as pd
 import numpy as np
@@ -22,8 +23,10 @@ aqskey = cfg['obs_key']
 
 if args.validate == 0:
     alldf = aqsdf
+    suffix = 'prod'
 else:
     alldf = train_and_testdfs(args.validate)['train']
+    suffix = f'test{args.validate:02}'
 
 gridx = np.arange(gf.NCOLS, dtype='f')
 gridy = np.arange(gf.NROWS, dtype='f')
@@ -45,10 +48,12 @@ for thisdate, ddf in alldf.groupby(['date']):
     zqf = qf.variables[cmaqkey][ti]
 
     for querykey, querystr in cfg['query_definitions'].items():
+        print(querykey, flush=True)
+        times = []
+        times.append(time.time())
         krig_opts = cfg['krig_opts'].copy()
         outpath = thisdate.strftime(outtmpl.format(**globals()))
-        if args.validate != 0:
-            outpath += f'.{args.validate:02d}'
+        outpath = outpath
 
         if os.path.exists(outpath):
             print(f'Keeping {outpath}')
@@ -56,7 +61,7 @@ for thisdate, ddf in alldf.groupby(['date']):
 
         querystring = querystr.format(**cfg)
         df = ddf.query(querystring).copy()
-        print(querykey, df.shape, flush=True)
+        print('Obs shape', df.shape, flush=True)
         print(aqskey, 'mean', df[aqskey].mean(), flush=True)
 
         i, j = df.I.values, df.J.values
@@ -89,7 +94,7 @@ for thisdate, ddf in alldf.groupby(['date']):
         )
         print('Exec UK', flush=True)
 
-        pxkerr, pxsderr= uk.execute(
+        pxkerr, pxsderr = uk.execute(
             "points", df.I.values.astype('f'), df.J.values.astype('f')
         )
         print('UK at points', 'mean', transformbackward(df.xY - pxkerr).mean())
@@ -176,6 +181,12 @@ Variance Model: {uk.variogram_function(uk.variogram_model_parameters, uk.lags)}
         setattr(outf, 'FILEDESC', filedesc)
         outf.lags = uk.lags
         outf.empirical_semivariance = uk.semivariance
-        outf.predicted_semivariance = uk.variogram_function(uk.variogram_model_parameters, uk.lags)
+        outf.predicted_semivariance = uk.variogram_function(
+            uk.variogram_model_parameters, uk.lags
+        )
         # Save file to disk
         outf.save(outpath, complevel=1, verbose=0)
+        times.append(time.time())
+        timesegs = np.diff(times)
+        totaltime = np.sum(timesegs)
+        print(querykey, f'{totaltime:.1f} seconds')
