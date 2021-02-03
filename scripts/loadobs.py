@@ -45,7 +45,7 @@ aqsdf = aqsdf.loc[~(i.mask | j.mask)]
 # time 3 is nominal present day
 DENS = popf.variables['DENS'][3, 0]
 
-aqsdf['DENS'] = DENS[aqsdf.J.values, aqsdf.I.values]
+aqsdf['pop_per_km2'] = DENS[aqsdf.J.values, aqsdf.I.values]
 aqsdf.eval(f'{obs_key} = {obs_defn}', inplace=True)
 
 

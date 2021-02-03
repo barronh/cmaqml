@@ -11,8 +11,8 @@
             "urban_minimum_density": "grid cells with people/km**2 less than urban_minimum density are rural",
             "variogram_model": "pykrige variogram model (exponential or gaussian)",
             "variogram_parameters": "range is set by other parameters, but psill and nuggest are set here",
-            "rural_gridcell_range": "range parameter for variogram (gaussian or exponential) to be used for rural environments units: grid cells",
-            "urban_gridcell_range": "same as rural_gridcell_range, but for urban",
+            "query_definitions": "definitions used to filter AQS sites/observatiosn can rely on latitude, longitude, population_density (#/km2), and any standard AQS field",
+            "query_gridcell_ranges": "range for sill and nugget to match definitions",
             "urban_blend": "variable used ('var') to calculate fractional use of urban kriged surface where 0 is at value ('0') and 1 is at value ('1').",
             "east_blend": "Same as urban_blend, but for east.",
             "north_blend": "Same as urban_blend, but for north.",
@@ -30,10 +30,11 @@
     "transform": "sqrt",
     "krig_opts": {
         "variogram_model": "gaussian",
-        "variogram_parameters": {
-            "psill": 0.75, "range": "see rural_ or urban_gridcell_range", "nugget": 0.25
-        },
-        "drift_terms": ["regional_linear"]
+        "drift_terms": ["regional_linear"],
+        "pseudo_inv": true
+    },
+    "variogram_parameters_gaussian": {
+        "psill": 0.75, "range": "overwriten by query_ranges", "nugget": 0.25
     },
     "longitude_center": -97,
     "latitude_center": 40,
@@ -57,30 +58,17 @@
     "domain": "12US2",
     "output_template": "output/UK.%Y%m%d.{querykey}.nc",
     "query_definitions": {
-        "WN_RUR": "longitude < {longitude_center} and latitude >= {latitude_center} and DENS < {urban_minimum_density}",
-        "WN_URB": "longitude < {longitude_center} and latitude >= {latitude_center} and DENS >= {urban_minimum_density}",
-        "WS_RUR": "longitude < {longitude_center} and latitude < {latitude_center} and DENS < {urban_minimum_density}",
-        "WS_URB": "longitude < {longitude_center} and latitude < {latitude_center} and DENS >= {urban_minimum_density}",
-        "EN_RUR": "longitude >= {longitude_center} and latitude >= {latitude_center} and DENS < {urban_minimum_density}",
-        "EN_URB": "longitude >= {longitude_center} and latitude >= {latitude_center} and DENS >= {urban_minimum_density}",
-        "ES_RUR": "longitude >= {longitude_center} and latitude < {latitude_center} and DENS < {urban_minimum_density}",
-        "ES_URB": "longitude >= {longitude_center} and latitude < {latitude_center} and DENS >= {urban_minimum_density}",
-        "ALL_URB": "DENS >= {urban_minimum_density}",
-        "ALL_RUR": "DENS < {urban_minimum_density}",
-        "ALL_BOTH": "DENS >= 0"
-    },
-    "query_gridcell_ranges": {
-        "WN_RUR": 30,
-        "WN_URB": 5,
-        "WS_RUR": 30,
-        "WS_URB": 5,
-        "EN_RUR": 30,
-        "EN_URB": 5,
-        "ES_RUR": 30,
-        "ES_URB": 5,
-        "ALL_URB": 5,
-        "ALL_RUR": 30,
-        "ALL_BOTH": 15
+        "WN_RUR": "longitude < {longitude_center} and latitude >= {latitude_center} and pop_per_km2 < {urban_minimum_density}",
+        "WN_URB": "longitude < {longitude_center} and latitude >= {latitude_center} and pop_per_km2 >= {urban_minimum_density}",
+        "WS_RUR": "longitude < {longitude_center} and latitude < {latitude_center} and pop_per_km2 < {urban_minimum_density}",
+        "WS_URB": "longitude < {longitude_center} and latitude < {latitude_center} and pop_per_km2 >= {urban_minimum_density}",
+        "EN_RUR": "longitude >= {longitude_center} and latitude >= {latitude_center} and pop_per_km2 < {urban_minimum_density}",
+        "EN_URB": "longitude >= {longitude_center} and latitude >= {latitude_center} and pop_per_km2 >= {urban_minimum_density}",
+        "ES_RUR": "longitude >= {longitude_center} and latitude < {latitude_center} and pop_per_km2 < {urban_minimum_density}",
+        "ES_URB": "longitude >= {longitude_center} and latitude < {latitude_center} and pop_per_km2 >= {urban_minimum_density}",
+        "ALL_URB": "pop_per_km2 >= {urban_minimum_density}",
+        "ALL_RUR": "pop_per_km2 < {urban_minimum_density}",
+        "ALL_BOTH": "pop_per_km2 >= 0"
     }
 }
     

@@ -13,6 +13,7 @@ parser.add_argument('--validate', default=0, type=int)
 
 args = parser.parse_args()
 
+transform = cfg['transform']
 transformforward = cfg['transformforward']
 transformbackward = cfg['transformbackward']
 
@@ -44,20 +45,19 @@ for thisdate, ddf in alldf.groupby(['date']):
     zqf = qf.variables[cmaqkey][ti]
 
     for querykey, querystr in cfg['query_definitions'].items():
-        drange = cfg['query_gridcell_ranges'][querykey]
+        krig_opts = cfg['krig_opts'].copy()
         outpath = thisdate.strftime(outtmpl.format(**globals()))
         if args.validate != 0:
             outpath += f'.{args.validate:02d}'
 
         if os.path.exists(outpath):
-            print(f'Skipping {outpath}')
+            print(f'Keeping {outpath}')
             continue
 
-        df = ddf.query(querystr.format(**cfg)).copy()
+        querystring = querystr.format(**cfg)
+        df = ddf.query(querystring).copy()
         print(querykey, df.shape, flush=True)
         print(aqskey, 'mean', df[aqskey].mean(), flush=True)
-        variogram_parameters = cfg['krig_opts']["variogram_parameters"].copy()
-        variogram_parameters['range'] = drange
 
         i, j = df.I.values, df.J.values
         # CMAQ
@@ -85,16 +85,14 @@ for thisdate, ddf in alldf.groupby(['date']):
             df.I.values.astype('f'),
             df.J.values.astype('f'),
             df.xYres.values,
-            variogram_model=cfg['krig_opts']["variogram_model"],
-            variogram_parameters=variogram_parameters,
-            drift_terms=cfg['krig_opts']["drift_terms"],
+            **krig_opts
         )
         print('Exec UK', flush=True)
 
-        # pktmp, psdtmp = uk.execute(
-        #     "points", df.I.values.astype('f'), df.J.values.astype('f')
-        # )
-        # print('UK at points', 'mean', transformbackward(pktmp).mean())
+        pxkerr, pxsderr= uk.execute(
+            "points", df.I.values.astype('f'), df.J.values.astype('f')
+        )
+        print('UK at points', 'mean', transformbackward(df.xY - pxkerr).mean())
 
         # Calculate UniversalKriging at all grid points
         xkerr, xsderr = uk.execute("grid", gridx, gridy)
@@ -102,7 +100,7 @@ for thisdate, ddf in alldf.groupby(['date']):
         # Convert kriged error to kriged output
         xQ2d = transformforward(zqf[0])
         xY2d = xQ2d * lr.slope + lr.intercept
-        kout = transformbackward(xkerr + xY2d)
+        kout = transformbackward(xY2d - xkerr)
         print('UK err at grid', 'mean', transformbackward(xkerr).mean())
         print('UK out at grid', 'mean', kout.mean())
 
@@ -163,5 +161,21 @@ for thisdate, ddf in alldf.groupby(['date']):
         cmaqvar[0, 0] = zqf[0]
         linvar[0, 0] = transformbackward(xY2d)
 
+        # FILEDESC
+        filedesc = f"""pykrige.UniversalKriging
+Model: {cmaqpath}
+AQS Query: {querystring}
+Date: {thisdate}
+Transformation: {transform}
+Model function: {uk.variogram_model}({uk.variogram_model_parameters});
+Statistics: {uk.get_statistics()}
+Lags: {uk.lags}
+Semivariance: {uk.semivariance}
+Variance Model: {uk.variogram_function(uk.variogram_model_parameters, uk.lags)}
+"""
+        setattr(outf, 'FILEDESC', filedesc)
+        outf.lags = uk.lags
+        outf.empirical_semivariance = uk.semivariance
+        outf.predicted_semivariance = uk.variogram_function(uk.variogram_model_parameters, uk.lags)
         # Save file to disk
         outf.save(outpath, complevel=1, verbose=0)

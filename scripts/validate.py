@@ -25,31 +25,55 @@ for date in np.unique(testdf.date.dt.to_pydatetime()):
     j = testdf.loc[:, 'J']
     tempdf = testdf.copy()
     tempdf['UK'] = fused_uk_f.variables['UK_TOTAL'][0, 0][j, i]
+    tempdf['Y'] = fused_uk_f.variables['Y'][0, 0][j, i]
+    tempdf['Q'] = fused_uk_f.variables['Q'][0, 0][j, i]
 
     transstd = transformforward(fused_uk_f.variables['SD'][0, 0][j, i])
     transmean = transformforward(tempdf['UK'])
     tempdf['UK_LO'] = transformbackward(transmean - 1.96 * transstd)
     tempdf['UK_HI'] = transformbackward(transmean + 1.96 * transstd)
 
-    tempdf.eval('Bias = UK - O', inplace=True)
-    RMSE = np.sqrt(np.mean(tempdf.Bias**2))
-    NMB = tempdf.Bias.mean() / tempdf.O.mean()
+    tempdf.eval('UKBias = UK - O', inplace=True)
+    tempdf.eval('YBias = Y - O', inplace=True)
+    tempdf.eval('QBias = Q - O', inplace=True)
+    RMSE = np.sqrt(np.mean(tempdf.UKBias**2))
+    NMB = tempdf.UKBias.mean() / tempdf.O.mean()
     R = tempdf.filter(['UK', 'O']).corr().iloc[0, 1]
+    YRMSE = np.sqrt(np.mean(tempdf.YBias**2))
+    YNMB = tempdf.YBias.mean() / tempdf.O.mean()
+    YR = tempdf.filter(['Y', 'O']).corr().iloc[0, 1]
+    QRMSE = np.sqrt(np.mean(tempdf.QBias**2))
+    QNMB = tempdf.QBias.mean() / tempdf.O.mean()
+    QR = tempdf.filter(['Q', 'O']).corr().iloc[0, 1]
     Coverage = (
         (tempdf.O > tempdf.UK_LO)
         & (tempdf.O < tempdf.UK_HI)
     ).mean()
     tempdf.sort_values(by='O', inplace=True)
     # plt.fill_between(tempdf.O, y1=tempdf.UK_LO, y2=tempdf.UK_HI)
-    plt.errorbar(
+    eb = plt.errorbar(
         tempdf.O, tempdf.UK,
-        yerr=np.array([tempdf.O - tempdf.UK_LO, tempdf.UK_HI - tempdf.O]),
-        linestyle='none', marker='o'
+        yerr=np.array([tempdf.UK - tempdf.UK_LO, tempdf.UK_HI - tempdf.UK]),
+        linestyle='none', marker='o',
+        label=f'U: RMSE: {RMSE:.2f}; NMB: {NMB:.1%}, R: {R:.2f}; Cov: {Coverage:.4f}'
     )
+    ys = plt.scatter(
+        tempdf.O, tempdf.Y, color='b',
+        label=f'Y: RMSE: {YRMSE:.2f}; NMB: {YNMB:.1%}, R: {YR:.2f}'
+    )
+    qs = plt.scatter(
+        tempdf.O, tempdf.Q, color='g',
+        label=f'Q: RMSE: {QRMSE:.2f}; NMB: {QNMB:.1%}, R: {QR:.2f}'
+    )
+    xmin, xmax = plt.xlim()
+    ymin, ymax = plt.ylim()
+    x = np.array([min(xmin, ymin), max(xmax, ymax)])
+    plt.plot(x, x, linestyle='-', color='k')
+    plt.xlim(*x)
+    plt.ylim(*x)
     # plt.scatter(tempdf.O, tempdf.UK)
-    plt.title(
-        f'RMSE: {RMSE:.2f}; NMB: {NMB:.1%}, R: {R:.2f}; Cov: {Coverage:.4f}'
-    )
+    lh = [eb, ys, qs]
+    plt.legend(lh, [l.get_label() for l in lh], bbox_to_anchor=(0.5, .9), loc='lower center')
     plt.xlabel('Withheld Observed')
     plt.ylabel('Grid Cell prediction (95% CI)')
     plt.savefig(
