@@ -4,6 +4,12 @@ Universal Kriging for CMAQ
     author: Barron H. Henderson
     date: 2020-02-01
 
+
+Status
+------
+
+Under active development and testing. Not ready for outside use.
+
 Overview
 --------
 
