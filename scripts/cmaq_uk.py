@@ -28,8 +28,8 @@ else:
     alldf = train_and_testdfs(args.validate)['train']
     suffix = f'test{args.validate:02}'
 
-gridx = np.arange(gf.NCOLS, dtype='f')
-gridy = np.arange(gf.NROWS, dtype='f')
+gridx = np.arange(gf.NCOLS, dtype='f') * gf.XCELL + gf.XCELL / 2
+gridy = np.arange(gf.NROWS, dtype='f') * gf.YCELL + gf.YCELL / 2
 
 atmpl = cfg['model_template']
 outtmpl = cfg['output_template']
@@ -87,20 +87,37 @@ for thisdate, ddf in alldf.groupby(['date']):
         # two-dimension kriged error and variance.
         print('Init UK', flush=True)
         uk = UniversalKriging(
-            df.I.values.astype('f'),
-            df.J.values.astype('f'),
+            df.X.values.astype('f'),
+            df.Y.values.astype('f'),
             df.xYres.values,
             **krig_opts
         )
         print('Exec UK', flush=True)
 
-        pxkerr, pxsderr = uk.execute(
-            "points", df.I.values.astype('f'), df.J.values.astype('f')
+        pxkerr, pxsdvar = uk.execute(
+            "points", df.X.values.astype('f'), df.Y.values.astype('f')
         )
         print('UK at points', 'mean', transformbackward(df.xY - pxkerr).mean())
 
         # Calculate UniversalKriging at all grid points
-        xkerr, xsderr = uk.execute("grid", gridx, gridy)
+        # Retruns the transformed error term and the variance of
+        # the error term
+        xkerr, xsdvar = uk.execute("grid", gridx, gridy)
+        # When duplicate x,y coordinates, the variance can be negative
+        # masking negative valuse and replacing with 0
+        mxsdvar = np.ma.masked_less(xsdvar, 0)
+        ninvalid = mxsdvar.mask.sum()
+
+        xsderr = mxsdvar.filled(0)**0.5
+        if ninvalid > 0:
+            print('*** WARNING ****')
+            print('Negative variances found. Replacing with 0.')
+            print('xVAR (min, max):', xsdvar.min(), xsdvar.max())
+            print('N:', mxsdvar.mask.sum())
+            print('@:', np.where(mxsdvar.mask))
+            print('After masking')
+            print('xSD (min, max):', xsderr.min(), xsderr.max())
+            print('*** WARNING ****')
 
         # Convert kriged error to kriged output
         xQ2d = transformforward(zqf[0])
@@ -108,7 +125,7 @@ for thisdate, ddf in alldf.groupby(['date']):
         kout = transformbackward(xY2d - xkerr)
         print('UK err at grid', 'mean', transformbackward(xkerr).mean())
         print('UK out at grid', 'mean', kout.mean())
-
+        
         print('Save...', flush=True)
         # Prepare template output file
         outf = gf.renameVariables(DUMMY='UK_TOTAL')
@@ -159,12 +176,15 @@ for thisdate, ddf in alldf.groupby(['date']):
         kerr = transformbackward(xkerr)
         sderr = transformbackward(xsderr)
 
+        Y2d = transformbackward(xY2d)
         # Populate file data
         ukvar[0, 0] = kout[:]
-        ukevar[0, 0] = kerr[:]
+        # square transform backward loses sign of kerr[:]
+        # so the error in units is calculated by difference.
+        ukevar[0, 0] = Y2d[:] - kout[:]
         uksdvar[0, 0] = sderr[:]
         cmaqvar[0, 0] = zqf[0]
-        linvar[0, 0] = transformbackward(xY2d)
+        linvar[0, 0] = Y2d[:]
 
         # FILEDESC
         filedesc = f"""pykrige.UniversalKriging

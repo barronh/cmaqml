@@ -34,7 +34,7 @@ popf = pnc.pncopen(poppath, format='ioapi')
 # Time three is present day
 pop_per_km2 = popf.variables['DENS'][3, 0]
 
-paths = sorted(glob(f'output/UK.{date}.[EW][SN]_*{suffix}'))
+paths = sorted(glob(f'output/UK.{date}.*{suffix}'))
 
 ukfiles = {
     path.split(f'{suffix}')[0].split('.')[-1]: pnc.pncopen(path, format='ioapi')
@@ -62,17 +62,22 @@ outf.FILEDESC = (
 )
 urbf = outf.copy()
 urbf.FILEDESC = (
-    "Fused:\n" + "\n - ".join([p for p in paths if '_URB.' in p])
+    "Fused:\n" + "\n - ".join([p for p in paths if 'S_URB.' in p or 'N_URB.' in p])
     + fusedefn
 )
 rurf = outf.copy()
 rurf.FILEDESC = (
-    "Fused:\n" + "\n - ".join([p for p in paths if '_RUR.' in p])
+    "Fused:\n" + "\n - ".join([p for p in paths if 'S_RUR.' in p or 'N_RUR.' in p])
     + fusedefn
 )
 bothf = outf.copy()
 bothf.FILEDESC = (
-    "Fused:\n" + "\n - ".join([p for p in paths if '_BOTH.' in p])
+    "Fused:\n" + "\n - ".join([p for p in paths if 'S_BOTH.' in p or 'N_BOTH.' in p])
+    + fusedefn
+)
+allf = outf.copy()
+allf.FILEDESC = (
+    "Fused:\n" + "\n - ".join([p for p in paths if 'ALL_RUR.' in p or 'ALL_URB.' in p])
     + fusedefn
 )
 # cmaqkeys = [k for k in outf.variables if k != 'TFLAG']
@@ -114,6 +119,10 @@ for cmaqkey in cmaqkeys:
         + ukfiles['EN_BOTH'].variables[cmaqkey][0, 0] * (efrac * nfrac)
         + ukfiles['ES_BOTH'].variables[cmaqkey][0, 0] * (efrac * sfrac)
     )
+    allf.variables[cmaqkey][0, 0] = (
+        ukfiles['ALL_URB'].variables[cmaqkey][0, 0] * (ufrac)
+        + ukfiles['ALL_RUR'].variables[cmaqkey][0, 0] * (rfrac)
+    )
 
 outf.save(
     f'blend/UK.{date}.BLEND_BLEND{suffix}',
@@ -122,6 +131,10 @@ outf.save(
 bothf.save(
     f'blend/UK.{date}.BLEND_BOTH{suffix}', complevel=1, verbose=0
 )
+allf.save(
+    f'blend/UK.{date}.ALL_BLEND{suffix}', complevel=1, verbose=0
+)
+
 urbf.save(
     f'blend/UK.{date}.BLEND_URB{suffix}', complevel=1, verbose=0
 )

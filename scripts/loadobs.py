@@ -38,9 +38,15 @@ i, j = gf.ll2ij(
     aqsdf.longitude.values,
     aqsdf.latitude.values, clean='mask'
 )
+x, y = gf.ll2xy(
+    aqsdf.longitude.values,
+    aqsdf.latitude.values
+)
 
 aqsdf['I'] = i
 aqsdf['J'] = j
+aqsdf['X'] = x
+aqsdf['Y'] = y
 aqsdf = aqsdf.loc[~(i.mask | j.mask)]
 # time 3 is nominal present day
 DENS = popf.variables['DENS'][3, 0]

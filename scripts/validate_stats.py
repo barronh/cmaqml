@@ -1,19 +1,21 @@
 from loadobs import train_and_testdfs
 import PseudoNetCDF as pnc
 import numpy as np
-import matplotlib.pyplot as plt
 from opts import cfg
 import argparse
 import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument('strftime')
+parser.add_argument('outpath')
 args = parser.parse_args()
 
 transformforward = cfg['transformforward']
 transformbackward = cfg['transformbackward']
 
-print('Model,date,withholding,RMSE,NMBPCT,R,Coverage')
+outfile = open(args.outpath, 'w')
+
+print('Model,date,withholding,RMSE,NMBPCT,R,Coverage', file=outfile)
 for validate in range(1, 11):
     testdf = train_and_testdfs(validate)['test']
     suffix = f'test{validate:02d}'
@@ -41,13 +43,13 @@ for validate in range(1, 11):
         tempdf.eval('YBias = Y - O', inplace=True)
         tempdf.eval('QBias = Q - O', inplace=True)
         URMSE = np.sqrt(np.mean(tempdf.UKBias**2))
-        UNMB = tempdf.UKBias.mean() / tempdf.O.mean()
+        UNMB = tempdf.UKBias.mean() / tempdf.O.mean() * 100
         UR = tempdf.filter(['UK', 'O']).corr().iloc[0, 1]
         YRMSE = np.sqrt(np.mean(tempdf.YBias**2))
-        YNMB = tempdf.YBias.mean() / tempdf.O.mean()
+        YNMB = tempdf.YBias.mean() / tempdf.O.mean() * 100
         YR = tempdf.filter(['Y', 'O']).corr().iloc[0, 1]
         QRMSE = np.sqrt(np.mean(tempdf.QBias**2))
-        QNMB = tempdf.QBias.mean() / tempdf.O.mean()
+        QNMB = tempdf.QBias.mean() / tempdf.O.mean() * 100
         QR = tempdf.filter(['Q', 'O']).corr().iloc[0, 1]
         # Coverage
         UCov = (
@@ -56,7 +58,9 @@ for validate in range(1, 11):
         ).mean()
         tempdf.sort_values(by='O', inplace=True)
         # ax.fill_between(tempdf.O, y1=tempdf.UK_LO, y2=tempdf.UK_HI)
-        print(f'UK,{datestr},{validate},{URMSE:.6e},{UNMB * 100:.2},{UR:.6e},{UCov:.6e}')
-        print(f'mCMAQplB,{datestr},{validate},{YRMSE:.6e},{YNMB * 100:.2},{YR:.6e},')
-        print(f'CMAQ,{datestr},{validate},{QRMSE:.6e},{QNMB * 100:.2},{QR:.6e},')
+        print(f'CMAQ,{datestr},{validate},{QRMSE:.6e},{QNMB:.2},{QR:.6e},', file=outfile)
+        print(f'LinCMAQ,{datestr},{validate},{YRMSE:.6e},{YNMB:.2},{YR:.6e},', file=outfile)
+        print(f'UK,{datestr},{validate},{URMSE:.6e},{UNMB:.2},{UR:.6e},{UCov:.6e}', file=outfile)
+        
 
+outfile.close()

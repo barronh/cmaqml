@@ -13,9 +13,9 @@ popf = pnc.pncopen(cfg['pop_path'], format='ioapi')
 # time 3 is nominal present day
 DENS = popf.variables['DENS'][3, 0]
 
-blendf = pnc.pncopen(f'blend/UK.{date}.BLEND_BLEND.nc', format='ioapi')
-blendrf = pnc.pncopen(f'blend/UK.{date}.BLEND_RUR.nc', format='ioapi')
-blenduf = pnc.pncopen(f'blend/UK.{date}.BLEND_URB.nc', format='ioapi')
+blendf = pnc.pncopen(f'blend/UK.{date}.BLEND_BLEND.prod.nc', format='ioapi')
+blendrf = pnc.pncopen(f'blend/UK.{date}.BLEND_RUR.prod.nc', format='ioapi')
+blenduf = pnc.pncopen(f'blend/UK.{date}.BLEND_URB.prod.nc', format='ioapi')
 
 cno = pycno.cno(proj=blendf.getproj(withgrid=True))
 norm = plt.Normalize(vmin=20, vmax=100)
@@ -29,11 +29,11 @@ def plotmasked(ax, var, norm):
 
 
 def composite(key, typ):
-    nwf = pnc.pncopen(f'output/UK.{date}.WN_{typ}.nc', format='ioapi')
-    nef = pnc.pncopen(f'output/UK.{date}.EN_{typ}.nc', format='ioapi')
-    swf = pnc.pncopen(f'output/UK.{date}.WS_{typ}.nc', format='ioapi')
-    sef = pnc.pncopen(f'output/UK.{date}.ES_{typ}.nc', format='ioapi')
-    blendf = pnc.pncopen(f'output/UK.{date}.ALL_{typ}.nc', format='ioapi')
+    nwf = pnc.pncopen(f'output/UK.{date}.WN_{typ}.prod.nc', format='ioapi')
+    nef = pnc.pncopen(f'output/UK.{date}.EN_{typ}.prod.nc', format='ioapi')
+    swf = pnc.pncopen(f'output/UK.{date}.WS_{typ}.prod.nc', format='ioapi')
+    sef = pnc.pncopen(f'output/UK.{date}.ES_{typ}.prod.nc', format='ioapi')
+    blendf = pnc.pncopen(f'output/UK.{date}.ALL_{typ}.prod.nc', format='ioapi')
 
     fig = plt.figure(figsize=(6, 8), constrained_layout=True)
     gs = fig.add_gridspec(4, 2)
