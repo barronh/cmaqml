@@ -4,6 +4,7 @@ from opts import cfg
 
 aqspath = cfg['obs_path']
 poppath = cfg['pop_path']
+g2dpath = cfg['gridcro2d_path']
 gdpath = cfg['griddesc_path']
 domname = cfg['domain']
 obs_key = cfg["obs_key"]
@@ -18,6 +19,7 @@ gf.SDATE = 1970001
 gf.STIME = 0
 gf.updatetflag(overwrite=True)
 popf = pnc.pncopen(poppath, format='ioapi')
+g2df = pnc.pncopen(g2dpath, format='ioapi')
 aqsdf = pd.read_csv(aqspath)
 aqsdf['date'] = pd.to_datetime(aqsdf['Date Local'])
 # aqsdf = aqsdf[
@@ -49,9 +51,10 @@ aqsdf['X'] = x
 aqsdf['Y'] = y
 aqsdf = aqsdf.loc[~(i.mask | j.mask)]
 # time 3 is nominal present day
-DENS = popf.variables['DENS'][3, 0]
-
-aqsdf['pop_per_km2'] = DENS[aqsdf.J.values, aqsdf.I.values]
+pop_per_km2 = popf.variables['DENS'][3, 0]
+elevation = g2df.variables['HT'][0, 0]
+aqsdf['pop_per_km2'] = pop_per_km2[aqsdf.J.values, aqsdf.I.values]
+aqsdf['elevation'] = elevation[aqsdf.J.values, aqsdf.I.values]
 aqsdf.eval(f'{obs_key} = {obs_defn}', inplace=True)
 
 

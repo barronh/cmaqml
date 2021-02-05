@@ -10,6 +10,15 @@ Status
 
 Under active development and testing. Not ready for outside use.
 
+Prerequisites
+-------------
+
+* Python >= 3.6
+* numpy >= 2
+* pykrige >= 1.5.1
+* Optional:
+  * sklearn >= 0.24
+
 Overview
 --------
 

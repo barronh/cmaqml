@@ -24,7 +24,8 @@
             "model_inkey": "Modeling variable name",
             "griddesc_path": "Path to IOAPI GRIDDESC file",
             "domain": "Domain key (e.g., 12US1, 12US2, 36US3), which must be defined in griddesc_path",
-            "output_template": "output/UK.%Y%m%d.{querykey}.nc"
+            "output_template": "output/UK.%Y%m%d.{querykey}.nc",
+            "thin_krig_dataset": "Useful for testing regression methods becuase kriging is usually the slowest part."
         }
     },
     "transform": "sqrt",
@@ -32,6 +33,7 @@
         "variogram_model": "exponential",
         "pseudo_inv": true
     },
+    "thin_krig_dataset": 3,
     "longitude_center": -97,
     "latitude_center": 40,
     "urban_minimum_density": 100,
@@ -47,7 +49,14 @@
     "obs_path": "input/daily_44201_20160715.zip",
     "obs_defn": "first_max_value * 1000",
     "obs_key": "O",
+    "regression_options": {
+        "model": "sklearn_RandomForestRegressor",
+        "xkeys": ["longitude", "latitude", "elevation", "pop_per_km2", "xQ"],
+        "ykey": "xO",
+        "model_options": {"n_estimators": 10, "max_depth": 3, "random_state": 1}
+    },
     "pop_path": "/work/ROMO/gis_rasters/gpw-v4/gpw_v4_une_atotpopbt_densy_12US2.IOAPI.nc",
+    "gridcro2d_path": "/home/bhenders/TestData/MCIP/GRIDCRO2D.12US2.35L.160101",
     "model_template": "/work/ROMO/2016platform/CMAQv531/2016fh/12US2/POST/O3/O3.LST.Y_24.2016fh.v531.12US2.%m.ncf",
     "model_inkey": "O3_8HRMAX",
     "griddesc_path": "input/GRIDDESC",

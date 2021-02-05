@@ -4,10 +4,11 @@ import pandas as pd
 import numpy as np
 from pykrige.uk import UniversalKriging
 from scipy.stats.mstats import linregress
-from loadobs import aqsdf, train_and_testdfs, gf
+from loadobs import aqsdf, train_and_testdfs, gf, pop_per_km2, elevation
 from opts import cfg
 import os
 import argparse
+import models
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--validate', default=0, type=int)
@@ -30,7 +31,7 @@ else:
 
 gridx = np.arange(gf.NCOLS, dtype='f') * gf.XCELL + gf.XCELL / 2
 gridy = np.arange(gf.NROWS, dtype='f') * gf.YCELL + gf.YCELL / 2
-
+longitude, latitude = gf.ij2ll(*np.meshgrid(np.arange(gf.NCOLS), np.arange(gf.NROWS)))
 atmpl = cfg['model_template']
 outtmpl = cfg['output_template']
 
@@ -62,7 +63,8 @@ for thisdate, ddf in alldf.groupby(['date']):
         querystring = querystr.format(**cfg)
         df = ddf.query(querystring).copy()
         print('Obs shape', df.shape, flush=True)
-        print(aqskey, 'mean', df[aqskey].mean(), flush=True)
+        pt_obs = df[aqskey]
+        print(f'{aqskey} mean: {pt_obs.mean():.2f}', flush=True)
 
         i, j = df.I.values, df.J.values
         # CMAQ
@@ -72,12 +74,25 @@ for thisdate, ddf in alldf.groupby(['date']):
         df['xQ'] = transformforward(df.Q)
         df['xO'] = transformforward(df[aqskey].values)
         # Linear regression
-        lr = linregress(df.xQ.values, df.xO.values)
+        xkeys = cfg["regression_options"]["xkeys"]
+        ykey = cfg["regression_options"]["ykey"]
+        # model:
+        # * scipy_linregress,
+        # * sklearn_RandomForestRegressor,
+        # * sklearn_LinearRegresson
+        model = getattr(
+            models, cfg["regression_options"]["model"]
+        )(
+            xkeys, ykey, **cfg["regression_options"]["model_options"]
+        )
+        
+        model.fit(df.loc[:, xkeys], df.loc[:, ykey])
 
         # X is transformed, so Y has transformed units
-        df['xY'] = (lr.slope * df.xQ + lr.intercept)
+        df['xY'] = model.predict(df.loc[:, xkeys])
         df['xYres'] = df['xY'] - df['xO']
-        print('linear fit', 'mean', transformbackward(df['xY']).mean())
+        pt_linest = transformbackward(df['xY'])
+        print(f'Linear point mean: {pt_linest.mean():.2f}', flush=True)
 
         # Temperature
         # df['T'] = zqf[0, j, i]
@@ -85,19 +100,20 @@ for thisdate, ddf in alldf.groupby(['date']):
         ###########################################################
         # Create the 2D universal kriging object and solves for the
         # two-dimension kriged error and variance.
-        print('Init UK', flush=True)
+        print('Init UK...', flush=True)
         uk = UniversalKriging(
-            df.X.values.astype('f'),
-            df.Y.values.astype('f'),
-            df.xYres.values,
+            df.X.values.astype('f')[::cfg["thin_krig_dataset"]],
+            df.Y.values.astype('f')[::cfg["thin_krig_dataset"]],
+            df.xYres.values[::cfg["thin_krig_dataset"]],
             **krig_opts
         )
-        print('Exec UK', flush=True)
+        print('Exec UK...', flush=True)
 
         pxkerr, pxsdvar = uk.execute(
             "points", df.X.values.astype('f'), df.Y.values.astype('f')
         )
-        print('UK at points', 'mean', transformbackward(df.xY - pxkerr).mean())
+        pt_ukest = transformbackward(df.xY - pxkerr)
+        print(f'UnivKrig pnt mean: {pt_ukest.mean():.2f}', flush=True)
 
         # Calculate UniversalKriging at all grid points
         # Retruns the transformed error term and the variance of
@@ -120,8 +136,9 @@ for thisdate, ddf in alldf.groupby(['date']):
             print('*** WARNING ****')
 
         # Convert kriged error to kriged output
-        xQ2d = transformforward(zqf[0])
-        xY2d = xQ2d * lr.slope + lr.intercept
+        xQ = transformforward(zqf[0])
+        x2d = np.array([eval(xkey).ravel() for xkey in xkeys]).T
+        xY2d = model.predict(x2d).reshape(xQ.shape)
         kout = transformbackward(xY2d - xkerr)
         print('UK err at grid', 'mean', transformbackward(xkerr).mean())
         print('UK out at grid', 'mean', kout.mean())
@@ -169,7 +186,7 @@ for thisdate, ddf in alldf.groupby(['date']):
         linvar.long_name = 'mCMAQplB'
         linvar.units = cmaqvar.units
         linvar.var_desc = (
-            f'untransform({lr.slope} transform(CMAQ) + {lr.intercept})'
+            f'untransform({model})'
         )
 
         # Convert UK and SD data to original units
@@ -191,6 +208,7 @@ for thisdate, ddf in alldf.groupby(['date']):
 Model: {cmaqpath}
 AQS Query: {querystring}
 Date: {thisdate}
+Initial Model: {model.display()}
 Transformation: {transform}
 Model function: {uk.variogram_model}({uk.variogram_model_parameters});
 Statistics: {uk.get_statistics()}
