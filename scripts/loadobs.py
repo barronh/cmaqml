@@ -1,5 +1,6 @@
 import PseudoNetCDF as pnc
 import pandas as pd
+import numpy as np
 from opts import cfg
 
 aqspath = cfg['obs_path']
@@ -23,11 +24,11 @@ g2df = pnc.pncopen(g2dpath, format='ioapi')
 aqsdf = pd.read_csv(aqspath)
 aqsdf['date'] = pd.to_datetime(aqsdf['Date Local'])
 # aqsdf = aqsdf[
-#     (aqsdf['date'].dt.month == 7) & (aqsdf['date'].dt.day == 15)
+#     (aqsdf['date'].dt.month == 1) & (aqsdf['date'].dt.day == 15)
 # ].copy()
 # Archive testdata, remove derived columns
 # aqsdf.drop('date', axis=1).to_csv(
-#     'input/daily_44201_20160715.zip', index=False
+#     'input/daily_88101_20160115.csv', index=False
 # )
 
 
@@ -56,7 +57,11 @@ elevation = g2df.variables['HT'][0, 0]
 aqsdf['pop_per_km2'] = pop_per_km2[aqsdf.J.values, aqsdf.I.values]
 aqsdf['elevation'] = elevation[aqsdf.J.values, aqsdf.I.values]
 aqsdf.eval(f'{obs_key} = {obs_defn}', inplace=True)
-
+isnegative = aqsdf.loc[:, obs_key] <= 0
+if isnegative.sum() > 0:
+    print('Removing negative values:', isnegative.sum(), np.where(isnegative))
+    aqsdf.drop(aqsdf[isnegative].index, inplace=True)
+    print('Done', aqsdf.shape)
 
 def train_and_testdfs(random_state):
     testdf = aqsdf.groupby(['date'], as_index=False).sample(

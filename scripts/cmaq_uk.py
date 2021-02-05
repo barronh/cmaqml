@@ -36,7 +36,9 @@ atmpl = cfg['model_template']
 outtmpl = cfg['output_template']
 
 for thisdate, ddf in alldf.groupby(['date']):
+    print(atmpl, thisdate)
     cmaqpath = thisdate.strftime(atmpl)
+    print(cmaqpath)
     qf = pnc.pncopen(cmaqpath, format='ioapi')
 
     # m2path = thisdate.strftime('METCRO2D.%Y%m%d.nc')

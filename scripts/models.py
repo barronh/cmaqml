@@ -21,6 +21,9 @@ class cmaq_regression:
 
 class sklearn_RandomForestRegressor(cmaq_regression):
     def __init__(self, xkeys, ykey, **kwds):
+        """
+        Thin wrapper to sklearn.ensemble.RandomForestRegressor
+        """
         from sklearn.ensemble import RandomForestRegressor
         cmaq_regression.__init__(self, xkeys, ykey, **kwds)
         self._model = RandomForestRegressor(**kwds)
@@ -47,11 +50,14 @@ class sklearn_RandomForestRegressor(cmaq_regression):
         return outstr
 
         
-class sklearn_LinearRegresson(cmaq_regression):
+class sklearn_LinearRegression(cmaq_regression):
     def __init__(self, xkeys, ykey):
-        from sklearn import linear_model
+        """
+        Thin wrapper to sklearn.ensemble.RandomForestRegressor
+        """
+        from sklearn.linear_model import LinearRegression
         cmaq_regression.__init__(self, xkeys, ykey)
-        self._model = linear_model.LinearRegression()
+        self._model = LinearRegression()
     
     def __str__(self):
         outstr = (
@@ -66,7 +72,7 @@ class sklearn_LinearRegresson(cmaq_regression):
 
 class scipy_linregress(cmaq_regression):
     """
-    scipy.stats.linregress wrapper
+    Thin wrapper for scipy.stats.linregress
     """
     def __init__(self, xkeys, ykey):
         cmaq_regression.__init__(self, xkeys, ykey)

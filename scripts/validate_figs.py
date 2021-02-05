@@ -41,8 +41,8 @@ for date in np.unique(testdf.date.dt.to_pydatetime()):
 
     transstd = transformforward(uk_f.variables['SD'][0, 0][j, i])
     transmean = transformforward(tempdf['UK'])
-    tempdf['UK_LO'] = transformbackward(transmean - 3 * transstd)
-    tempdf['UK_HI'] = transformbackward(transmean + 3 * transstd)
+    tempdf['UK_LO'] = transformbackward(transmean - 1.96 * transstd)
+    tempdf['UK_HI'] = transformbackward(transmean + 1.96 * transstd)
 
     tempdf.eval('UKBias = UK - O', inplace=True)
     tempdf.eval('YBias = Y - O', inplace=True)

@@ -24,7 +24,7 @@ e1 = cfg["longitude_blend"]["1"]
 if args.validate == 0:
     suffix = '.prod.nc'
 else:
-    suffix = f'.test{args.validate:02}.nc'
+    suffix = f'.test{args.validate:02d}.nc'
 
 cmaqkey = 'UK'
 poppath = cfg['pop_path']
