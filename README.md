@@ -82,17 +82,16 @@ Annotated Directory Structure
 |-- README.md
 |-- config.json
 |   # Fitting parameters and spatial domain splitting parameters
+|-- cmaqml
+|   |  # CMAQ Machine Learning framework
+|   |-- models
+|   |   # Module of known Machine Learning modules
+|   |   # Currently includes regression, Random Forest, eVNA and others
+|   `-- obs
+|       # Module of known observation readers. Currently only AQS
 |-- scripts
-|   |-- cmaq_uk.py
-|   |   # Work horse: applies universal krigging to partial domains:
-|   |   # East (E) or West (W), North (N) or South (S), Urban (U) or Rural (R)
-|   |-- loadobs.py
-|   |   # easy access to AQS datasets, used by cmaq_uk.py
 |   |-- blend.py
 |   |   # Create a composite surface from East/West, North/South, Urban/Rural
-|   |-- models.py
-|   |   # Wrappers for scipy and sklearn estimation models to support meta-data
-|   |   # representation in the output FILEDESC attribute
 |   |-- validate_figs.py
 |   |   # Create validation figures including statistics from a single
 |   |   # withholding
@@ -109,7 +108,7 @@ Annotated Directory Structure
 |   |   # subset of AQS; right now not part of repository for testing
 |   `-- CMAQ.20160715.nc
 |       # subset of CMAQ. right now not part of repository
-``-- output
+`-- output
     |-- UK.<YYYYMMDD>.<querykey>.nc
     |   # outputs from cmaq_uk.py 
     |   # template where
