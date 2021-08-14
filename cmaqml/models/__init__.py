@@ -1,4 +1,8 @@
-__all__ = ['sklearn_RandomForestRegressor']
+__all__ = [
+    'sklearn_LinearRegression', 'sklearn_RandomForestRegressor',
+    'scipy_linregress', 'cmaqml_vna', 'cmaqml_evna',
+]
+
 import numpy as np
 
 class cmaq_regression:
@@ -24,7 +28,7 @@ class cmaq_regression:
 
 
 class cmaqml_vna(cmaq_regression):
-    def __init__(self, xkeys, ykey, enhanced=False, **kwds):
+    def __init__(self, xkeys, ykey, enhanced=False, fastsort=False, **kwds):
         """
         xkeys : list
             keys to use a predictive variables. Must include an x coordinate
@@ -34,6 +38,10 @@ class cmaqml_vna(cmaq_regression):
             key to use as target
         enhanced : bool
             Use VNA of factor rather to adjust model
+        verbose : int
+            level of verbosity
+        fastsort : bool
+            if fastsort, then use custom sorted for faster performance than cKDTree
         kwds : mappable
             See VNA and cKDTree
         """
@@ -47,17 +55,21 @@ class cmaqml_vna(cmaq_regression):
             modkey = None
             self.modidx = None
         self.modkey = modkey
+        self.fastsort = fastsort
             
         self.coordidx = [i for i, k in enumerate(self.xkeys) if k != modkey]
         self.kwds = kwds
 
     def fit(self, p, y):
         from scipy.spatial import cKDTree
-        #from .voronoi import fastsort as cKDTree
+        from .voronoi import fastsort
         # All non-model inputs should be coordinates in the order of X, y
         pv = np.asarray(p)
-        self.tree = cKDTree(pv[:, self.coordidx])
-        # self.voronoi = Voronoi(self.tree.data, incremental=True)
+        if self.fastsort:
+            self.tree = fastsort(pv[:, self.coordidx])
+        else:
+            self.tree = cKDTree(pv[:, self.coordidx])
+
         assert((self.tree.data == pv[:, self.coordidx]).all())
         # Correction factor
         self._obs = np.asarray(y)
@@ -90,7 +102,7 @@ class cmaqml_vna(cmaq_regression):
         for idx, z in np.ndenumerate(zs):
             xy = xys[idx, :]
             if self.verbose > 0 and (idx[0] % modn) == 0:
-                print(end='.', flush=True)
+                print(f'\r{idx[0] / n:.1%}', end='')
             known_pidx, = np.where((tree.data == xy).all(1))
             if known_pidx.size > 0:
                 vna_out[idx] = self._z[known_pidx].mean()
@@ -105,9 +117,11 @@ class cmaqml_vna(cmaq_regression):
         if self.verbose > 0:
             print(flush=True)
 
-        print(f'VNA: {vna_out.mean():.1f}+/-{vna_out.std():.1f}')
-        #print(f'Std: {std.mean():.1f}+/-{std.std():.1f}')
-        print(f'Count: {vna_count.mean():.1f}+/-{vna_count.std():.1f}')
+        if self.verbose > 0:
+            print(f'VNA: {vna_out.mean():.1f}+/-{vna_out.std():.1f}')
+            #print(f'Std: {std.mean():.1f}+/-{std.std():.1f}')
+            print(f'Count: {vna_count.mean():.1f}+/-{vna_count.std():.1f}')
+        
         if self.enhanced:
             out = zs * vna_out
         else:
@@ -119,7 +133,7 @@ class cmaqml_vna(cmaq_regression):
 
 
 class cmaqml_evna(cmaqml_vna):
-    def __init__(self, xkeys, ykey, **kwds):
+    def __init__(self, xkeys, ykey, fastsort=False, **kwds):
         """
         Thin wrapper around cmaqml_vna that forces enhanced=True
         """
@@ -180,6 +194,8 @@ class scipy_linregress(cmaq_regression):
     Thin wrapper for scipy.stats.linregress
     """
     def __init__(self, xkeys, ykey):
+        if len(xkeys) > 1:
+            raise ValueError('scipy.stats.linregress can only take one xkey')
         cmaq_regression.__init__(self, xkeys, ykey)
 
     def fit(self, p, y):

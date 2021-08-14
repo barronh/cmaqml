@@ -14,7 +14,7 @@ def selectreader(obs_format):
     return _keys[obs_key]
 
 
-def loadobs(cfg, gf, metafiles):
+def loadobs(cfg, gf, metafiles, verbose=1):
     """
     cfg : mappable
         dictionary of options
@@ -24,7 +24,7 @@ def loadobs(cfg, gf, metafiles):
         see add_gridded_meta
     """
     reader = selectreader(cfg['obs_format'])
-    obsdf = reader(cfg)
+    obsdf = reader(cfg, verbose=verbose)
     i, j = gf.ll2ij(
         obsdf.longitude.values,
         obsdf.latitude.values, clean='mask'
@@ -58,19 +58,20 @@ def add_gridded_meta(df, metafiles):
     for mf in metafiles:
         i, j = mf.ll2ij(df.longitude, df.latitude)
         for varkey, var in mf.variables.items():
-            df.loc[:, varkey] = var[..., j, i].squeeze()
+            if varkey not in df.columns:
+                df.loc[:, varkey] = var[..., j, i].squeeze()
+            else:
+                print(f'Retaining {varkey}')
 
     return df
 
 
 def train_and_testdfs(df, group_keys, random_state):
     if group_keys is None:
-        gdf = df
-    else:
-        gdf = df.groupby(group_keys, as_index=False)
+        group_keys = []
 
-    testdf = gdf.groupby(['date'], as_index=False).sample(
+    testdf = df.groupby(group_keys + ['date'], as_index=False).sample(
         frac=.1, replace=False, random_state=random_state
     )
-    traindf = df.drop(df.index)
+    traindf = df.drop(testdf.index)
     return dict(train=traindf, test=testdf)

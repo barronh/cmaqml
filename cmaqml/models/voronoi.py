@@ -2,7 +2,7 @@ import numpy as np
 from warnings import warn
 
 class fastsort:
-    def __init__(self, xy):
+    def __init__(self, xy, **kwds):
         """
         Functionality like cKDTree, but for some reason faster
         when searching on a grid...

@@ -1,3 +1,4 @@
+__all__ = ['run']
 import time
 import os
 import PseudoNetCDF as pnc
@@ -5,14 +6,15 @@ import pandas as pd
 import numpy as np
 from pykrige.uk import UniversalKriging
 from .obs import loadobs, train_and_testdfs, add_gridded_meta
-from .opts import loadcfg
+from .opts import loadcfg, loadmetafiles
 from . import models
 
 class timer:
-    def __init__(self):
+    def __init__(self, verbose):
         self._starttimes = {}
         self._endtimes = {}
         self._currentkey = None
+        self.verbose = verbose
 
     def __call__(self, key):
         t = time.time()
@@ -21,7 +23,7 @@ class timer:
         if okey is not None:
             self._endtimes[okey] = t
             dt = t - self._starttimes[okey]
-            print(f'{okey} {dt:.1f} seconds')
+            logger(f'{okey} {dt:.1f} seconds', 1, self.verbose)
         self._currentkey = key    
 
     def total(self):
@@ -33,7 +35,7 @@ class timer:
             end = self._endtimes[key]
             dt = end - start
             tot_dt += dt
-        print(f'Total {tot_dt:.1f} seconds')
+        logger(f'Total {tot_dt:.1f} seconds', 1, self.verbose)
             
 
 def cmaqtmpl(qf, cmaqkey):
@@ -62,7 +64,10 @@ def cmaqtmpl(qf, cmaqkey):
     latv[:] = latitude
     lonv = sqf.copyVariable(zqv, key='longitude', withdata=False)
     lonv[:] = longitude
-    keepkeys = ('longitude', 'latitude', cmaqkey, 'x' + cmaqkey)
+    yv = sqf.copyVariable(zqv, key='Y', withdata=False)
+    xv = sqf.copyVariable(zqv, key='X', withdata=False)
+    xv[:], yv[:] = sqf.ll2xy(longitude, latitude)
+    keepkeys = ('longitude', 'latitude', 'X', 'Y', cmaqkey, 'x' + cmaqkey)
     for key in list(sqf.variables):
         if key not in keepkeys:
             del sqf.variables[key]
@@ -98,8 +103,11 @@ def gridded_x(infiles, xkeys):
     x2d = np.array(x2d_list).T
     return x2d
 
+def logger(msg, level=1, printlevel=1):
+    if printlevel >= level:
+        print(msg, flush=True)
 
-def run(cfg, validate=0):
+def run(cfg, validate=0, verbose=1, overwrite=False):
     """
     Run utility
 
@@ -110,13 +118,16 @@ def run(cfg, validate=0):
         otherwise, it should match loadcfg results
     validate : int
         random_state to use for validation or 0 for a production run
-
+    verbose : int
+        Add or remove verbosity (higher is more verbose)
+    overwrite : bool
+        If overwrite is True, clobber existing files with os.remove
+    
     Returns
     -------
     outf : PseudoNetCDFFile
         Also saved to disk
     """
-
     if isinstance(cfg, str):
         cfg = loadcfg(cfg)
 
@@ -125,55 +136,41 @@ def run(cfg, validate=0):
         cfg['griddesc_path'], format='griddesc', GDNAM=cfg['domain']
     )
 
-    # Create a list of meta files
-    metafiles = []
-    for gmcfg in cfg['gridded_meta']:
-        mf = pnc.pncopen(
-            gmcfg['path_template'],
-            format=gmcfg.get('format', 'ioapi')
-        )
-        smf = mf.subset(gmcfg['var_keys'])
-        if 'slice' in gmcfg:
-            tmf = smf.slice(**gmcfg['slice'])
-        else:
-            tmf = smf
-
-        for key in tmf.variables:
-            if key not in gmcfg['var_keys']:
-                del tmf.variables[key]
-
-        metafiles.append(tmf)
-
+    # load metadata files
+    metafiles = loadmetafiles(cfg)
+    
     # load observations with metadata
-    obsdf = loadobs(cfg, gf, metafiles)
+    obsdf = loadobs(cfg['obs'], gf, metafiles, verbose=verbose)
 
-    transform = cfg['transform']
+    transform = cfg['regression_options']['transform']
     transformforward = cfg['transformforward']
     transformbackward = cfg['transformbackward']
 
-    cmaqkey = cfg['model_inkey']
-    aqskey = cfg['obs_key']
+    cmaqkey = cfg['model']['model_inkey']
+    aqskey = cfg['obs']['obs_key']
 
     if validate == 0:
         traindf = obsdf
         suffix = 'prod'
     else:
-        traindf = train_and_testdfs(validate)['train']
+        traindf = train_and_testdfs(obsdf, None, validate)['train']
+        print(traindf.shape)
         suffix = f'test{validate:02}'
 
     gridx = np.arange(gf.NCOLS, dtype='f') * gf.XCELL + gf.XCELL / 2
     gridy = np.arange(gf.NROWS, dtype='f') * gf.YCELL + gf.YCELL / 2
-    atmpl = cfg['model_template']
+    atmpl = cfg['model']['model_template']
     outtmpl = cfg['output_template']
 
     traindf.loc[:, 'xO'] = transformforward(traindf[aqskey].values)
 
     first = True
     outf = None
+    outpaths = {}
     for thisdate, ddf in traindf.groupby(['date']):
-        print(atmpl, thisdate)
+        logger(f'{atmpl} {thisdate}', 1, verbose)
         cmaqpath = thisdate.strftime(atmpl)
-        print(cmaqpath)
+        logger(cmaqpath, 1, verbose)
         qf = pnc.pncopen(cmaqpath, format='ioapi')
 
         times = pd.to_datetime(
@@ -193,26 +190,29 @@ def run(cfg, validate=0):
         # Already has other meta-files
         # adding CMAQ
         add_gridded_meta(ddf, [sqf])
-
+        
         for querykey, querystr in cfg['query_definitions'].items():
-            print(querykey, flush=True)
-            runtime = timer()
+            logger(querykey, 1, verbose)
+            runtime = timer(verbose)
             runtime('prep')
             krig_opts = cfg['krig_opts'].copy()
             outpath = thisdate.strftime(outtmpl.format(**locals()))
-            outpath = outpath
-
+            outpaths.setdefault(querykey, []).append(outpath)
+            
             if os.path.exists(outpath):
-                print(f'Keeping {outpath}')
-                continue
+                if overwrite:
+                    os.remove(outpath)
+                else:
+                    logger(f'Keeping {outpath}', 1, verbose)
+                    continue
 
             querystring = querystr.format(**cfg)
-            df = ddf.query(querystring).copy().iloc[::cfg['thin_dataset']]
+            df = ddf.query(querystring).copy().iloc[::cfg['obs']['thin_dataset']]
 
-            print('Obs shape', df.shape, flush=True)
+            logger(f'Obs shape {df.shape}', 1, verbose)
             pt_obs = df[aqskey]
 
-            print(f'{aqskey} mean: {pt_obs.mean():.2f}', flush=True)
+            logger(f'{aqskey} mean: {pt_obs.mean():.2f}', 1, verbose)
 
             # Linear regression
             xkeys = cfg["regression_options"]["xkeys"]
@@ -235,7 +235,7 @@ def run(cfg, validate=0):
             df['xY'] = model.predict(df.loc[:, xkeys])
             df['xYres'] = df['xY'] - df['xO']
             pt_linest = transformbackward(df['xY'])
-            print(f'Model point mean: {pt_linest.mean():.2f}', flush=True)
+            logger(f'Model point mean: {pt_linest.mean():.2f}', 1, verbose)
 
             # Predict using model at grid
             outshape = sqf.variables[cmaqkey].shape
@@ -264,7 +264,7 @@ def run(cfg, validate=0):
 
             Y2d = transformbackward(xY2d)
             linvar[0, 0] = Y2d[:]
-            print(f'Model grid mean: {Y2d.mean():.2f}', flush=True)
+            logger(f'Model grid mean: {Y2d.mean():.2f}', 1, verbose)
             runtime('Krig')
 
 
@@ -272,20 +272,20 @@ def run(cfg, validate=0):
             # Create the 2D universal kriging object and solves for the
             # two-dimension kriged error and variance.
             if cfg["thin_krig_dataset"] > 0:
-                print('Init UK...', flush=True)
+                logger('Init UK...', 1, verbose)
                 uk = UniversalKriging(
                     df.X.values.astype('f')[::cfg["thin_krig_dataset"]],
                     df.Y.values.astype('f')[::cfg["thin_krig_dataset"]],
                     df.xYres.values[::cfg["thin_krig_dataset"]],
                     **krig_opts
                 )
-                print('Exec UK...', flush=True)
+                logger('Exec UK...', 1, verbose)
                 runtime('Krig exec')
                 pxkerr, pxsdvar = uk.execute(
                     "points", df.X.values.astype('f'), df.Y.values.astype('f')
                 )
                 pt_ukest = transformbackward(df.xY - pxkerr)
-                print(f'UnivKrig pnt mean: {pt_ukest.mean():.2f}', flush=True)
+                logger(f'UnivKrig pnt mean: {pt_ukest.mean():.2f}', 1, verbose)
 
                 # Calculate UniversalKriging at all grid points
                 # Retruns the transformed error term and the variance of
@@ -298,22 +298,22 @@ def run(cfg, validate=0):
 
                 xsderr = mxsdvar.filled(0)**0.5
                 if ninvalid > 0:
-                    print('*** WARNING ****')
-                    print('Negative variances found. Replacing with 0.')
-                    print('xVAR (min, max):', xsdvar.min(), xsdvar.max())
-                    print('N:', mxsdvar.mask.sum())
-                    print('@:', np.where(mxsdvar.mask))
-                    print('After masking')
-                    print('xSD (min, max):', xsderr.min(), xsderr.max())
-                    print('*** WARNING ****')
+                    logger('*** WARNING ****', 1, verbose)
+                    logger('Negative variances found. Replacing with 0.', 1, verbose)
+                    logger(f'xVAR (min, max): {xsdvar.min()}, {xsdvar.max()}', 1, verbose)
+                    logger(f'N: {mxsdvar.mask.sum()}', 1, verbose)
+                    logger(f'@: {np.where(mxsdvar.mask)}', 1, verbose)
+                    logger('After masking', 1, verbose)
+                    logger(f'xSD (min, max): {xsderr.min()}, {xsderr.max()}', 1, verbose)
+                    logger('*** WARNING ****', 1, verbose)
 
                 # Convert UK and SD data to original units
                 kerr = transformbackward(xkerr)
                 sderr = transformbackward(xsderr)
                 kout = transformbackward(xY2d - xkerr)
 
-                print('UK err at grid', 'mean', transformbackward(xkerr).mean())
-                print('UK out at grid', 'mean', kout.mean())
+                logger(f'UK err at grid mean: {transformbackward(xkerr).mean()}', 1, verbose)
+                logger(f'UK out at grid mean: {kout.mean()}', 1, verbose)
 
                 # Prepare UK variable
                 ukvar = outf.createVariable(
@@ -351,7 +351,7 @@ Variance Model: {uk.variogram_function(uk.variogram_model_parameters, uk.lags)}
                     uk.variogram_model_parameters, uk.lags
                 )
 
-            print('Save...', flush=True)
+            logger('Save...', 1, verbose)
 
             # FILEDESC
             filedesc = f"""Model: {cmaqpath}
@@ -360,7 +360,12 @@ Date: {thisdate}
 Transformation: {transform}
 """
             setattr(outf, 'FILEDESC', filedesc)
+            outf.SDATE = int(thisdate.strftime('%Y%j'))
+            outf.STIME = int(thisdate.strftime('%H%M%S'))
+            outf.TSTEP = 240000
             # Save file to disk
-            outf.save(outpath, complevel=1, verbose=0)
+            diskf = outf.save(outpath, complevel=1, verbose=0)
+            diskf.close()
             runtime.total()
-    return outf
+
+    return outpaths

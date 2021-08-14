@@ -1,12 +1,13 @@
-from loadobs import train_and_testdfs
 import PseudoNetCDF as pnc
 import numpy as np
 import matplotlib.pyplot as plt
-from opts import cfg
+from cmaqml.opts import loadcfg
+from cmaqml.obs import loadobs, train_and_testdfs
 import argparse
 import os
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--config', type=str, default='config.json')
 parser.add_argument('validate', type=int, default=1)
 parser.add_argument('strftime')
 args = parser.parse_args()
@@ -16,10 +17,17 @@ if args.validate == 0:
 else:
     suffix = f'.test{args.validate:02}.nc'
 
+cfg = loadcfg(args.config)
+
+gf = pnc.pncopen(cfg['griddesc_path'], format='griddesc', GDNAM=cfg['domain'])
+# load observations with metadata
+obsdf = loadobs(cfg['obs'], gf, [])
+
+
 transformforward = cfg['transformforward']
 transformbackward = cfg['transformbackward']
 
-testdf = train_and_testdfs(args.validate)['test']
+testdf = train_and_testdfs(obsdf, None, args.validate)['test']
 
 for date in np.unique(testdf.date.dt.to_pydatetime()):
     myvals = testdf.query(f'date == "{date}"')

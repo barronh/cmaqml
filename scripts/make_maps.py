@@ -2,16 +2,23 @@ import PseudoNetCDF as pnc
 import matplotlib.pyplot as plt
 import pycno
 import argparse
-from opts import cfg
+from cmaqml.opts import loadcfg, loadmetafiles
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--config', type=str, default='config.json')
 parser.add_argument('date', help='YYYYMMDD')
 args = parser.parse_args()
 date = args.date
 
-popf = pnc.pncopen(cfg['pop_path'], format='ioapi')
-# time 3 is nominal present day
-DENS = popf.variables['DENS'][3, 0]
+cfg = loadcfg(args.config)
+
+metafiles = loadmetafiles(cfg)
+for metafile in metafiles:
+    if 'DENS' in metafile.variables:
+        DENS = metafile.variables['DENS'][0, 0]
+        break
+else:
+    raise KeyError('DENS not found')
 
 blendf = pnc.pncopen(f'blend/UK.{date}.BLEND_BLEND.prod.nc', format='ioapi')
 blendrf = pnc.pncopen(f'blend/UK.{date}.BLEND_RUR.prod.nc', format='ioapi')

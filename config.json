@@ -3,99 +3,72 @@
         "title": "CMAQ Universal Kriging Configuration",
         "author": "Barron H. Henderson",
         "contact": "<lastname>.<firstname>@epa.gov",
-        "Revision": "v0.2",
-        "Notes" : "This has currently been tested for a single day of PM25 (20160115) and a single day of O3 MDA8 (20160715).",
-        "field_definitions": {
-            "transform": "Choose: none, log, or sqrt; these transform CMAQ and obs before regression/kriging",
-            "thin_krig_dataset": "Useful for testing regression methods becuase kriging is usually the slowest part.",
-            "krig_opts.variogram_model": "pykrige variogram model (exponential or gaussian)",
-            "krig_opts.variogram_parameters": "range is set by other parameters, but psill and nuggest are set here",
-            "query_definitions": "definitions used to filter AQS sites/observatiosn can rely on latitude, longitude, population_density (#/km2), and any standard AQS field",
-            "longitude_center": "Dividing line for West/East; units: degrees east",
-            "latitude_center": "Dividing line for South/North; units: degrees north",
-            "urban_minimum_density": "grid cells with people/km**2 less than urban_minimum density are rural",
-            "urban_blend": "variable used ('var') to calculate fractional use of urban kriged surface where 0 is at value ('0') and 1 is at value ('1').",
-            "east_blend": "Same as urban_blend, but for east.",
-            "north_blend": "Same as urban_blend, but for north.",
-            "query_gridcell_ranges": "range for sill and nugget to match definitions",
-            "obs_path": "Path where observatiosn can be found.",
-            "obs_defn": "first_max_value * 1000",
-            "obs_key": "short name for observations.",
-            "model_template": "strftime with for using date to constructe file path",
-            "model_inkey": "Modeling variable name",
-            "pop_path": "Population density file (must have DENS variable).",
-            "gridcro2d_path": "Path for elevation, must be named HT",
-            "griddesc_path": "Path to IOAPI GRIDDESC file",
-            "domain": "Domain key (e.g., 12US1, 12US2, 36US3), which must be defined in griddesc_path",
-            "regression_options.model": "sklearn_RandomForestRegressor or sklearn_LinearRegression or scipy_linregress",
-            "regression_options.xkeys": "independent variables (predictors) currently has access to latitude, longitude, DENS, and xQ (x indicating transformed)",
-            "regression_options.ykey": "dependent variable (predicted) usually transformed observation (i.e., xO)",
-            "regression_options.model_options": "specific to the model you've choosen (see sklearn for more details)",
-            "output_template": "path for outputs, typically output/UK.%Y%m%d.{querykey}.nc"
-        }
+        "Revision": "v0.4",
+        "Note1": "Each configuration variable has a corresponding note with the same name but prefixed with an underscore.",
+        "Note2": "Testing has only been done for a single day of PM25 (20160115) and a single day of O3 MDA8 (20160715)."
     },
-    "thin_dataset": 1,
-    "thin_krig_dataset": 0,
+    "_output_template": "Uses strftime and key substituation for datasubsets and production or validation suffixes",
+    "output_template": "output/UK.%Y%m%d.{querykey}.{suffix}.nc",
+    "_thin_krig_dataset": "Useful for testing regression methods becuase kriging is usually the slowest part.",
+    "thin_krig_dataset": 2,
     "krig_opts": {
+        "_variogram_model": "pykrige variogram model (exponential or gaussian)",
         "variogram_model": "exponential",
+        "_variogram_parameters": "range is set by other parameters, but psill and nuggest can be set here",
         "pseudo_inv": true
     },
-    "longitude_center": -97,
-    "latitude_center": 40,
-    "urban_minimum_density": 100,
-    "urban_blend": {
-        "var": "DENS", "0": 60, "1": 200, "notes": "15/km2 = 0; 100/km2 = 1"
-    },
-    "longitude_blend": {
-        "var": "longitude", "0": -102, "1": -92, "notes": "5 degree transition on each side"
-    },
-    "latitude_blend": {
-        "var": "latitude", "0": 35, "1": 45, "notes": "5 degree transition on each side"
-    },
+    "_griddesc_path": "Path to IOAPI formated GRIDDESC file",
     "griddesc_path": "input/GRIDDESC",
-    "domain": "12US2",
-    "obs_format": "aqs",
-    "obs_path": "input/daily_88101_20160115.zip",
-    "obs_defn": "arithmetic_mean",
-    "obs_key": "O",
+    "_domain": "Domain key (e.g., 12US1, 12US2, 36US3, 108US2), which must be defined in griddesc_path",
+    "domain": "108US2",
+    "obs": {
+        "_thin_dataset": "Useful for testing",
+        "thin_dataset": 1,
+        "_obs_format": "Options are: aqs, more to come.",
+        "obs_format": "aqs",
+        "_obs_path": "Path where observations can be found.",
+        "obs_path": "input/daily_44201_20160715.zip",
+        "_obs_defn": "For Ozone, use first_max_value * 1000. For PM, use arithmetic_mean",
+        "obs_defn": "first_max_value * 1000.",
+        "_obs_key": "short name for observations.",
+        "obs_key": "O"
+    },
+    "model": {
+        "_model_template": "strftime with for using date to construct file path",
+        "model_template": "input/O3_8HRMAX.LST.Y_24.2016fh.v531.108US2.5-9.nc",
+        "_model_inkey": "Modeling variable name: O3_8HRMAX or PM25_FRM",
+        "model_inkey": "O3_8HRMAX"
+    },
+    "_gridded_meta": "Each item must have a path_template (strftime), a list of var_keys, and optionally a slice.",
     "gridded_meta": [
        {
-           "path_template": "/work/ROMO/gis_rasters/gpw-v4/gpw_v4_une_atotpopbt_densy_12US2.IOAPI.nc",
+           "path_template": "input/gpw_v4_une_atotpopbt_densy_108US2.IOAPI.nc",
            "var_keys": ["DENS"],
            "slice": {"TSTEP": 3}
        },
        {
-           "path_template": "/home/bhenders/TestData/MCIP/GRIDCRO2D.12US2.35L.160101",
+           "path_template": "input/GRIDCRO2D.108US2.35L.160101.nc",
            "var_keys": ["HT"]
        }
     ],
-    "model_template": "/work/ROMO/2016platform/CMAQv531/2016fh/12US2/POST/dailyavg/dailyavg.LST.Y_24.2016fh.v531.12US2.%m.ncf",
-    "model_inkey": "PM25_FRM",
-    "transform": "log",
     "regression_options": {
-        "model": "sklearn_RandomForestRegressor",
-        "xkeys": ["longitude", "latitude"],
-        "ykey": "xO",
-        "evna_model_options": {"k": 100, "verbose": 1, "inversedistancepower": 2},
-        "model_options": {"n_estimators": 10, "max_depth": 3, "random_state": 1}
+        "_model": "sklearn_RandomForestRegressor or sklearn_LinearRegression or scipy_linregress or cmaqml_evna or cmaqml_vna",
+        "model": "sklearn_LinearRegression",
+        "_model_options": {
+            "_note": "Model options are specific to the model you've choosen (see sklearn for more details)",   
+            "scmaqml_evna": {"fastsort": false, "k": 20, "verbose": 1},
+            "sklearn_RandomForestRegressor": {"n_estimators": 1000, "max_depth": 4, "random_state": 1}
+        },
+        "model_options": {},
+        "_transform": "Choose: none, log, or sqrt; these transform CMAQ and obs before regression/kriging",
+        "transform": "sqrt",
+        "_xkeys": "independent variables (predictors) currently has access to X, Y, latitude, longitude, any gridded_meta, and xQ (x indicating transformed)",
+        "xkeys": ["X", "Y", "DENS", "HT", "xO3_8HRMAX"],
+        "_ykey": "dependent variable (predicted) usually transformed observation (i.e., xO)",
+        "ykey": "xO"
     },
-    "output_template": "output/UK.%Y%m%d.{querykey}.{suffix}.nc",
+    "_query_definitions": "definitions used to filter AQS sites/observations can rely on any standard AQS field or fields from metafiles. These can also reference arbitrary variables added to configuration file (see below).",
     "query_definitions": {
-        "WN_RUR": "longitude < {longitude_center} and latitude >= {latitude_center} and DENS < {urban_minimum_density}",
-        "WN_URB": "longitude < {longitude_center} and latitude >= {latitude_center} and DENS >= {urban_minimum_density}",
-        "WS_RUR": "longitude < {longitude_center} and latitude < {latitude_center} and DENS < {urban_minimum_density}",
-        "WS_URB": "longitude < {longitude_center} and latitude < {latitude_center} and DENS >= {urban_minimum_density}",
-        "EN_RUR": "longitude >= {longitude_center} and latitude >= {latitude_center} and DENS < {urban_minimum_density}",
-        "EN_URB": "longitude >= {longitude_center} and latitude >= {latitude_center} and DENS >= {urban_minimum_density}",
-        "ES_RUR": "longitude >= {longitude_center} and latitude < {latitude_center} and DENS < {urban_minimum_density}",
-        "ES_URB": "longitude >= {longitude_center} and latitude < {latitude_center} and DENS >= {urban_minimum_density}",
-        "WN_BOTH": "longitude < {longitude_center} and latitude >= {latitude_center}",
-        "WS_BOTH": "longitude < {longitude_center} and latitude < {latitude_center}",
-        "EN_BOTH": "longitude >= {longitude_center} and latitude >= {latitude_center}",
-        "ES_BOTH": "longitude >= {longitude_center} and latitude < {latitude_center}",
-        "ALL_URB": "DENS >= {urban_minimum_density}",
-        "ALL_RUR": "DENS < {urban_minimum_density}",
-        "ALL_BOTH": "longitude == longitude"
+        "ALL": "longitude == longitude"
     }
 }
-    

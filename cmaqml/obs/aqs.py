@@ -6,7 +6,7 @@ def renamer(k):
     return k.lower().replace(' ', '_').replace('1st', 'first')
 
 
-def readaqs(cfg):
+def readaqs(cfg, verbose=1):
     aqspath = cfg['obs_path']
     obs_key = cfg["obs_key"]
     obs_defn = cfg["obs_defn"]
@@ -24,11 +24,13 @@ def readaqs(cfg):
     aqsdf.eval(f'{obs_key} = {obs_defn}', inplace=True)
     isnegative = aqsdf.loc[:, obs_key] <= 0
     if isnegative.sum() > 0:
-        print(
-            'Removing negative values:',
-            isnegative.sum(), np.where(isnegative)
-        )
+        if verbose > 0:
+            print(
+                'Removing negative values:',
+                isnegative.sum(), np.where(isnegative)
+            )
         aqsdf.drop(aqsdf[isnegative].index, inplace=True)
-        print('Done', aqsdf.shape)
+        if verbose > 0:
+            print('Done', aqsdf.shape)
 
     return aqsdf

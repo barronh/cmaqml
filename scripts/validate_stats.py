@@ -1,23 +1,28 @@
-from loadobs import train_and_testdfs
 import PseudoNetCDF as pnc
 import numpy as np
-from opts import cfg
+from cmaqml.opts import loadcfg
+from cmaqml.obs import loadobs, train_and_testdfs
 import argparse
 import os
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--config', type=str, default='config.json')
+parser.add_argument('--validate', type=int, action='append', default=[1])
 parser.add_argument('strftime')
 parser.add_argument('outpath')
 args = parser.parse_args()
 
+cfg = loadcfg(args.config)
+gf = pnc.pncopen(cfg['griddesc_path'], format='griddesc', GDNAM=cfg['domain'])
+obsdf = loadobs(cfg['obs'], gf, [])
 transformforward = cfg['transformforward']
 transformbackward = cfg['transformbackward']
 
 outfile = open(args.outpath, 'w')
 
 print('Model,date,withholding,RMSE,NMBPCT,R,Coverage', file=outfile)
-for validate in range(1, 11):
-    testdf = train_and_testdfs(validate)['test']
+for validate in args.validate:
+    testdf = train_and_testdfs(obsdf, None, validate)['test']
     suffix = f'test{validate:02d}'
     for date in np.unique(testdf.date.dt.to_pydatetime()):
         myvals = testdf.query(f'date == "{date}"')
@@ -58,9 +63,9 @@ for validate in range(1, 11):
         ).mean()
         tempdf.sort_values(by='O', inplace=True)
         # ax.fill_between(tempdf.O, y1=tempdf.UK_LO, y2=tempdf.UK_HI)
-        print(f'CMAQ,{datestr},{validate},{QRMSE:.6e},{QNMB:.2},{QR:.6e},', file=outfile)
-        print(f'LinCMAQ,{datestr},{validate},{YRMSE:.6e},{YNMB:.2},{YR:.6e},', file=outfile)
-        print(f'UK,{datestr},{validate},{URMSE:.6e},{UNMB:.2},{UR:.6e},{UCov:.6e}', file=outfile)
+        print(f'CMAQ,{datestr},{validate},{QRMSE:.6e},{QNMB:.2f},{QR:.6e},nan', file=outfile)
+        print(f'LinCMAQ,{datestr},{validate},{YRMSE:.6e},{YNMB:.2f},{YR:.6e},nan', file=outfile)
+        print(f'UK,{datestr},{validate},{URMSE:.6e},{UNMB:.2f},{UR:.6e},{UCov:.6e}', file=outfile)
         
 
 outfile.close()

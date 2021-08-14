@@ -1,6 +1,6 @@
 from pykrige.rk import Krige
 from sklearn.model_selection import GridSearchCV
-from loadobs import train_and_testdfs
+from cmaqml.obs import train_and_testdfs
 
 
 df = train_and_testdfs(1)
