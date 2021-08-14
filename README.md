@@ -6,6 +6,11 @@ Universal Kriging for CMAQ
     last updated: 2020-02-05
     contributors: <your name here>
 
+Quick Start
+-----------
+
+Open Working.ipynb for a working example. Review config.json to understand
+the options that are used.
 
 Status
 ------
@@ -66,6 +71,11 @@ models for the mean are accessed via the config.json file "regression_options"
   sklearn.linear_model.LinearRegression, or
 * sklearn_RandomForestRegressor: provides Ensemble Random Forest modeling via
   sklearn.ensemble.RandomForestRegressor
+* cmaqml_evna: provides an enhanced Voronoi Neighbor Averaging scheme. This
+  has been custom built and may need to be made more efficient. At this point,
+  the Voronoi neighbors are calculated for each point independently. Another
+  approach would be to calculate one set of Voronoi diagrams and then find
+  points within the single set of polygons.
   
 Any sklearn model is capable of being added. The challenge is in finding the
 right way to export the model as a text representation for meta-data. To add
@@ -80,6 +90,11 @@ Annotated Directory Structure
 ```
 .
 |-- README.md
+|-- Working.ipynb
+|   # Working example
+|-- Blend.ipynb
+|   # An example where multiple subset grids are run
+|   # and then blended.
 |-- config.json
 |   # Fitting parameters and spatial domain splitting parameters
 |-- cmaqml
@@ -90,8 +105,6 @@ Annotated Directory Structure
 |   `-- obs
 |       # Module of known observation readers. Currently only AQS
 |-- scripts
-|   |-- blend.py
-|   |   # Create a composite surface from East/West, North/South, Urban/Rural
 |   |-- validate_figs.py
 |   |   # Create validation figures including statistics from a single
 |   |   # withholding
@@ -106,7 +119,18 @@ Annotated Directory Structure
 |   |   # subset of AQS; right now not part of repository for testing
 |   |-- daily_88101_20160115.zip
 |   |   # subset of AQS; right now not part of repository for testing
-|   `-- CMAQ.20160715.nc
+|   |-- dailyavg.LST.Y_24.2016fh.v531.108US2.01.nc
+|   |   # A single day of PM25_FRM post-processed output from CMAQ
+|   |-- O3_8HRMAX.LST.Y_24.2016fh.v531.108US2.5-9.nc
+|   |   # A single day of O3_8HRMAX post-processed output from CMAQ
+|   |-- gpw_v4_une_atotpopbt_densy_108US2.IOAPI.nc
+|   |   # An IOAPI-like file with population density derived from the SEDAC
+|   |   # Gridded Population World v4
+|   |-- GRIDCRO2D.108US2.35L.160101.nc
+|   |   # A single day file with terrain height
+|   |-- GRIDDESC
+|   |   # An IOAPI text file defining common grids
+|   `-- make_test.py
 |       # subset of CMAQ. right now not part of repository
 `-- output
     |-- UK.<YYYYMMDD>.<querykey>.nc
