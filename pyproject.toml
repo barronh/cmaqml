@@ -1,0 +1,9 @@
+[build-system]
+requires = [
+    "setuptools>=42",
+    "wheel",
+    "pandas>=1.1",
+    "pykrige>=1.5.1",
+    "pseudonetcdf"
+]
+build-backend = "setuptools.build_meta"

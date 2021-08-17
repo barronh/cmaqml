@@ -90,19 +90,15 @@ Annotated Directory Structure
 ```
 .
 |-- README.md
-|-- Working.ipynb
-|   # Working example
-|-- Blend.ipynb
-|   # An example where multiple subset grids are run
-|   # and then blended.
 |-- config.json
 |   # Fitting parameters and spatial domain splitting parameters
-|-- cmaqml
-|   |  # CMAQ Machine Learning framework
-|   |-- models
-|   |   # Module of known Machine Learning modules
-|   |   # Currently includes regression, Random Forest, eVNA and others
-|   `-- obs
+|-- src/
+|   `-- cmaqml
+|       |  # CMAQ Machine Learning framework
+|       |-- models
+|       |   # Module of known Machine Learning modules
+|       |   # Currently includes regression, Random Forest, eVNA and others
+|       `-- obs
 |       # Module of known observation readers. Currently only AQS
 |-- scripts
 |   |-- validate_figs.py
@@ -114,31 +110,37 @@ Annotated Directory Structure
 |   |   # Script for visualization
 |   `-- fitting.py
 |       # not complete. Ideally, optimize UK settings for application to domains
-|-- input/
-|   |-- daily_44201_20160715.zip
-|   |   # subset of AQS; right now not part of repository for testing
-|   |-- daily_88101_20160115.zip
-|   |   # subset of AQS; right now not part of repository for testing
-|   |-- dailyavg.LST.Y_24.2016fh.v531.108US2.01.nc
-|   |   # A single day of PM25_FRM post-processed output from CMAQ
-|   |-- O3_8HRMAX.LST.Y_24.2016fh.v531.108US2.5-9.nc
-|   |   # A single day of O3_8HRMAX post-processed output from CMAQ
-|   |-- gpw_v4_une_atotpopbt_densy_108US2.IOAPI.nc
-|   |   # An IOAPI-like file with population density derived from the SEDAC
-|   |   # Gridded Population World v4
-|   |-- GRIDCRO2D.108US2.35L.160101.nc
-|   |   # A single day file with terrain height
-|   |-- GRIDDESC
-|   |   # An IOAPI text file defining common grids
-|   `-- make_test.py
-|       # subset of CMAQ. right now not part of repository
-`-- output
-    |-- UK.<YYYYMMDD>.<querykey>.nc
-    |   # outputs from cmaq_uk.py 
-    |   # template where
-    |   #  * YYYYMMDD is the date
-    |   #  * querykey in: (EN|ES|WN|WS|ALL)_(URB|RUR|BOTH)
-    `-- UK.YYYYMMDD.FUSED.<querykey>.nc where 
-        # outputs from blend.py
-        # where querykey in ALL_URB, ALL_RUR, oroutputs from blend.py
+`-- examples/
+    |-- Working.ipynb
+    |   # Working example
+    |-- Blend.ipynb
+    |   # An example where multiple subset grids are run
+    |   # and then blended.
+    |-- input/
+    |   |-- daily_44201_20160715.zip
+    |   |   # subset of AQS; right now not part of repository for testing
+    |   |-- daily_88101_20160115.zip
+    |   |   # subset of AQS; right now not part of repository for testing
+    |   |-- dailyavg.LST.Y_24.2016fh.v531.108US2.01.nc
+    |   |   # A single day of PM25_FRM post-processed output from CMAQ
+    |   |-- O3_8HRMAX.LST.Y_24.2016fh.v531.108US2.5-9.nc
+    |   |   # A single day of O3_8HRMAX post-processed output from CMAQ
+    |   |-- gpw_v4_une_atotpopbt_densy_108US2.IOAPI.nc
+    |   |   # An IOAPI-like file with population density derived from the SEDAC
+    |   |   # Gridded Population World v4
+    |   |-- GRIDCRO2D.108US2.35L.160101.nc
+    |   |   # A single day file with terrain height
+    |   |-- GRIDDESC
+    |   |   # An IOAPI text file defining common grids
+    |   `-- make_test.py
+    |   # subset of CMAQ. right now not part of repository
+    `-- output
+        |-- UK.<YYYYMMDD>.<querykey>.nc
+        |   # outputs from cmaq_uk.py 
+        |   # template where
+        |   #  * YYYYMMDD is the date
+        |   #  * querykey in: (EN|ES|WN|WS|ALL)_(URB|RUR|BOTH)
+        `-- UK.YYYYMMDD.FUSED.<querykey>.nc where 
+            # outputs from blend.py
+            # where querykey in ALL_URB, ALL_RUR, oroutputs from blend.py
 ```
