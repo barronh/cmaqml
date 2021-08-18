@@ -1,7 +1,8 @@
 # Explicit ignore
 figs/*
 examples/output/*
-examples/input/*
+examples/input
+examples/config.json
 csv/*
 blend/*
 log.run
