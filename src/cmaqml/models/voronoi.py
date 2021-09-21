@@ -98,6 +98,8 @@ def VoronoiNeighbors(
         distances and indices of nearest k neighbors
     """
     from scipy.spatial import Voronoi
+    if xy.shape[0] != 1:
+        raise ValueError('VoronoiNeighbors is designed for a single target')
     k = min(k, tree.data.shape[0])
     dist, idx = tree.query(xy, k)
     dist = dist[0]
