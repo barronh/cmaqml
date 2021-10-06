@@ -9,6 +9,7 @@ from .obs import loadobs, train_and_testdfs, add_gridded_meta
 from .opts import loadcfg, loadmetafiles
 from . import models
 
+
 class timer:
     def __init__(self, verbose):
         self._starttimes = {}
@@ -24,7 +25,7 @@ class timer:
             self._endtimes[okey] = t
             dt = t - self._starttimes[okey]
             logger(f'{okey} {dt:.1f} seconds', 1, self.verbose)
-        self._currentkey = key    
+        self._currentkey = key
 
     def total(self):
         t = time.time()
@@ -36,7 +37,7 @@ class timer:
             dt = end - start
             tot_dt += dt
         logger(f'Total {tot_dt:.1f} seconds', 1, self.verbose)
-            
+
 
 def cmaqtmpl(qf, cmaqkey):
     """
@@ -103,9 +104,11 @@ def gridded_x(infiles, xkeys):
     x2d = np.array(x2d_list).T
     return x2d
 
+
 def logger(msg, level=1, printlevel=1):
     if printlevel >= level:
         print(msg, flush=True)
+
 
 def run(cfg, validate=0, verbose=1, overwrite=False):
     """
@@ -122,7 +125,7 @@ def run(cfg, validate=0, verbose=1, overwrite=False):
         Add or remove verbosity (higher is more verbose)
     overwrite : bool
         If overwrite is True, clobber existing files with os.remove
-    
+
     Returns
     -------
     outf : PseudoNetCDFFile
@@ -138,7 +141,7 @@ def run(cfg, validate=0, verbose=1, overwrite=False):
 
     # load metadata files
     metafiles = loadmetafiles(cfg)
-    
+
     # load observations with metadata
     obsdf = loadobs(cfg['obs'], gf, metafiles, verbose=verbose)
 
@@ -190,7 +193,7 @@ def run(cfg, validate=0, verbose=1, overwrite=False):
         # Already has other meta-files
         # adding CMAQ
         add_gridded_meta(ddf, [sqf])
-        
+
         for querykey, querystr in cfg['query_definitions'].items():
             logger(querykey, 1, verbose)
             runtime = timer(verbose)
@@ -198,7 +201,7 @@ def run(cfg, validate=0, verbose=1, overwrite=False):
             krig_opts = cfg['krig_opts'].copy()
             outpath = thisdate.strftime(outtmpl.format(**locals()))
             outpaths.setdefault(querykey, []).append(outpath)
-            
+
             if os.path.exists(outpath):
                 if overwrite:
                     os.remove(outpath)
@@ -207,7 +210,8 @@ def run(cfg, validate=0, verbose=1, overwrite=False):
                     continue
 
             querystring = querystr.format(**cfg)
-            df = ddf.query(querystring).copy().iloc[::cfg['obs']['thin_dataset']]
+            df = ddf.query(querystring).copy(
+            ).iloc[::cfg['obs']['thin_dataset']]
 
             logger(f'Obs shape {df.shape}', 1, verbose)
             pt_obs = df[aqskey]
@@ -267,7 +271,6 @@ def run(cfg, validate=0, verbose=1, overwrite=False):
             logger(f'Model grid mean: {Y2d.mean():.2f}', 1, verbose)
             runtime('Krig')
 
-
             ###########################################################
             # Create the 2D universal kriging object and solves for the
             # two-dimension kriged error and variance.
@@ -299,12 +302,21 @@ def run(cfg, validate=0, verbose=1, overwrite=False):
                 xsderr = mxsdvar.filled(0)**0.5
                 if ninvalid > 0:
                     logger('*** WARNING ****', 1, verbose)
-                    logger('Negative variances found. Replacing with 0.', 1, verbose)
-                    logger(f'xVAR (min, max): {xsdvar.min()}, {xsdvar.max()}', 1, verbose)
+                    logger(
+                        'Negative variances found. Replacing with 0.',
+                        1, verbose
+                    )
+                    logger(
+                        f'xVAR (min, max): {xsdvar.min()}, {xsdvar.max()}',
+                        1, verbose
+                    )
                     logger(f'N: {mxsdvar.mask.sum()}', 1, verbose)
                     logger(f'@: {np.where(mxsdvar.mask)}', 1, verbose)
                     logger('After masking', 1, verbose)
-                    logger(f'xSD (min, max): {xsderr.min()}, {xsderr.max()}', 1, verbose)
+                    logger(
+                        f'xSD (min, max): {xsderr.min()}, {xsderr.max()}',
+                        1, verbose
+                    )
                     logger('*** WARNING ****', 1, verbose)
 
                 # Convert UK and SD data to original units
@@ -312,7 +324,10 @@ def run(cfg, validate=0, verbose=1, overwrite=False):
                 sderr = transformbackward(xsderr)
                 kout = transformbackward(xY2d - xkerr)
 
-                logger(f'UK err at grid mean: {transformbackward(xkerr).mean()}', 1, verbose)
+                logger(
+                    f'UK err at grid mean: {transformbackward(xkerr).mean()}',
+                    1, verbose
+                )
                 logger(f'UK out at grid mean: {kout.mean()}', 1, verbose)
 
                 # Prepare UK variable
@@ -332,7 +347,9 @@ Lags: {uk.lags}
 Semivariance: {uk.semivariance}
 Variance Model: {uk.variogram_function(uk.variogram_model_parameters, uk.lags)}
 """
-                ukevar = outf.copyVariable(ukvar, key='UK_ERROR', withdata=False)
+                ukevar = outf.copyVariable(
+                    ukvar, key='UK_ERROR', withdata=False
+                )
                 ukevar.long_name = 'UnivKrigOfRes',
                 ukevar.var_desc = (
                     'UnivKrig = untransform(UK(xY - xO)); where x indicates'

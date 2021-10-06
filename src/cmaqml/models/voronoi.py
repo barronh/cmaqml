@@ -1,6 +1,7 @@
 import numpy as np
 from warnings import warn
 
+
 class fastsort:
     def __init__(self, xy, **kwds):
         """
@@ -27,15 +28,15 @@ class fastsort:
 
 
 def VNA(tree, xy, obsz, inversedistancepower=2, **vn_kwds):
-    """
+    r"""
     Return Voronoi Neighbor Averages
-    
+
     vna = \sum_i{w_i*z_i}
-    
+
     where:
         i \in Voronoi neighbors
         w_i = (1 / dist_i**inversedistancepower)
-    
+
     Arguments
     ---------
     tree : scipy.stats.cKDtree
@@ -51,7 +52,7 @@ def VNA(tree, xy, obsz, inversedistancepower=2, **vn_kwds):
     """
     dist, idx = VoronoiNeighbors(tree, xy, **vn_kwds)
     vna_z = obsz[idx]
-    
+
     # VNA and eVNA use inverse distance weighting
     if inversedistancepower > 0:
         invdist = (1 / dist)**inversedistancepower
@@ -75,12 +76,13 @@ def VNA(tree, xy, obsz, inversedistancepower=2, **vn_kwds):
 
     return vna_out, weight, vna_z
 
+
 def VoronoiNeighbors(
     tree, xy, k=100, **kd_kwds
 ):
     """
     Return Neighbors on a Voronoi diagram (excuding xy)
-    
+
     Arguments
     ---------
     tree : scipy.stats.cKDtree
@@ -91,7 +93,7 @@ def VoronoiNeighbors(
         nearest points to search for Voronoi neighbors
     kd_kwds : mappable
         KDTree query keywords
-    
+
     Returns
     -------
     dist, idx : array
@@ -125,10 +127,10 @@ def VoronoiNeighbors(
     # [1] https://docs.scipy.org/doc/scipy-0.18.1/reference/
     #     generated/scipy.spatial.Voronoi.html
     shared_edges = [xy for xy in vor.ridge_points if gcidx in xy]
-    
+
     # Unique pairs excluding the grid cell piont are the closest
     # observations.
     neighboridx = np.sort(np.unique(shared_edges).ravel())[:-1]
-    
-    # Neighbors 
+
+    # Neighbors
     return dist[neighboridx], idx[neighboridx]

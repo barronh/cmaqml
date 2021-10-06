@@ -5,6 +5,7 @@ __all__ = [
 
 import numpy as np
 
+
 class cmaq_regression:
     def __init__(self, xkeys, ykey, **kwds):
         """
@@ -41,7 +42,8 @@ class cmaqml_vna(cmaq_regression):
         verbose : int
             level of verbosity
         fastsort : bool
-            if fastsort, then use custom sorted for faster performance than cKDTree
+            if fastsort, then use custom sorted for faster performance than
+            cKDTree
         kwds : mappable
             See VNA and cKDTree
         """
@@ -56,7 +58,7 @@ class cmaqml_vna(cmaq_regression):
             self.modidx = None
         self.modkey = modkey
         self.fastsort = fastsort
-            
+
         self.coordidx = [i for i, k in enumerate(self.xkeys) if k != modkey]
         self.kwds = kwds
 
@@ -75,7 +77,7 @@ class cmaqml_vna(cmaq_regression):
         self._obs = np.asarray(y)
         if self.enhanced:
             self._model = pv[:, self.modidx]
-            self._z =  self._obs / self._model
+            self._z = self._obs / self._model
         else:
             self._z = self._obs
         return None
@@ -83,7 +85,7 @@ class cmaqml_vna(cmaq_regression):
     def predict(self, p):
         from .voronoi import VNA
         pv = np.asarray(p)
-        
+
         if self.enhanced:
             zs = pv[:, self.modidx]
         else:
@@ -112,16 +114,16 @@ class cmaqml_vna(cmaq_regression):
                 )
                 vna_out[idx] = out[0]
                 vna_count[idx] = out[1].size
-                #std[idx] = vna_z.std()
-                
+                # std[idx] = vna_z.std()
+
         if self.verbose > 0:
             print(flush=True)
 
         if self.verbose > 0:
             print(f'VNA: {vna_out.mean():.1f}+/-{vna_out.std():.1f}')
-            #print(f'Std: {std.mean():.1f}+/-{std.std():.1f}')
+            # print(f'Std: {std.mean():.1f}+/-{std.std():.1f}')
             print(f'Count: {vna_count.mean():.1f}+/-{vna_count.std():.1f}')
-        
+
         if self.enhanced:
             out = zs * vna_out
         else:

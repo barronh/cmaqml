@@ -3,6 +3,7 @@ __all__ = ['loadcfg', 'loadmetafiles']
 import json
 import numpy as np
 
+
 def removecomments(cfg):
     for key in list(cfg):
         if key.startswith('_'):
@@ -11,7 +12,7 @@ def removecomments(cfg):
             val = cfg[key]
             if isinstance(val, dict):
                 removecomments(val)
-            
+
 
 def loadcfg(cfgpath, comments=False):
     cfg = json.load(open(cfgpath))
@@ -27,14 +28,15 @@ def loadcfg(cfgpath, comments=False):
             'sqrt': lambda x: x**2,
             'log': lambda x: np.exp(x),
         }[transform]
-    
+
     removecomments(cfg)
 
     return cfg
 
+
 def loadmetafiles(cfg):
     import PseudoNetCDF as pnc
-    
+
     # Create a list of meta files
     metafiles = []
     for gmcfg in cfg['gridded_meta']:
@@ -53,5 +55,5 @@ def loadmetafiles(cfg):
                 del tmf.variables[key]
 
         metafiles.append(tmf)
-    
+
     return metafiles

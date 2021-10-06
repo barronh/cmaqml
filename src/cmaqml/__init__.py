@@ -1,4 +1,4 @@
-__all__ = ['obs', 'models', 'opts', '__version__']
+__all__ = ['driver', 'obs', 'models', 'opts', '__version__']
 
 import pkg_resources
 from . import driver
